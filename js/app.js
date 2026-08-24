@@ -20,7 +20,7 @@ const REFRESH_MS = 60 * 1000;
 const STALE_MS = 5 * 60 * 1000;
 
 const state = {
-  geo: null,          // data/siderno.json
+  geo: null,          // data/linea.json
   timetable: null,    // data/timetable.json
   chainByCode: new Map(),
   trains: [],
@@ -33,8 +33,10 @@ const state = {
   lastRefresh: null,
   refreshing: false,
   liveCount: 0,
+  proxyOk: false,
   notifyArmed: 0,
   message: null,      // esito dell'ultima calibrazione
+  listLimit: 8,       // la linea ha decine di PL: si mostrano i piu' vicini
 };
 
 const $ = (id) => document.getElementById(id);
@@ -111,7 +113,7 @@ const WORDS = {
 async function boot() {
   try {
     const [geo, timetable] = await Promise.all([
-      fetch("data/siderno.json").then((r) => r.json()),
+      fetch("data/linea.json").then((r) => r.json()),
       fetch("data/timetable.json").then((r) => r.json()),
     ]);
     state.geo = geo;
@@ -186,6 +188,10 @@ async function refresh() {
     state.coverage = coverage;
 
     state.liveCount = await applyLiveDelays(trains, now);
+    // Distinzione necessaria: zero treni con ritardo puo' voler dire che i
+    // proxy sono caduti, oppure semplicemente che a quest'ora non ne circola
+    // nessuno. Sono due situazioni molto diverse da comunicare.
+    state.proxyOk = rfi.status.ok;
     if (state.liveCount) {
       const codes = new Set(state.geo.stations.map((s) => s.code));
       await refineImminent(trains, codes, now);
@@ -245,11 +251,20 @@ function tick() {
 
 function render() {
   tick();
+  renderPlace();
   renderSource();
   renderBanner();
   renderStrip();
   renderCalibSummary();
   for (const el of ["stripPanel", "timelinePanel", "listPanel"]) $(el).hidden = false;
+}
+
+/** L'etichetta accanto al nome segue la zona: la linea e' lunga 200 km. */
+function renderPlace() {
+  const el = document.querySelector(".brand-place");
+  if (!el) return;
+  const c = state.crossings[0];
+  el.textContent = c ? nearestStation(c) || "Jonica" : "Jonica";
 }
 
 function renderSource() {
@@ -264,15 +279,18 @@ function renderSource() {
   }
 
   const age = state.lastRefresh ? Date.now() - state.lastRefresh : Infinity;
-  if (state.liveCount && age < STALE_MS) {
-    dot.className = "source-dot live";
-    text.textContent = `in tempo reale · ${rfi.status.proxy ?? ""}`.trim();
-  } else if (state.liveCount) {
-    dot.className = "source-dot stale";
-    text.textContent = `aggiornato ${clock(state.lastRefresh)}`;
-  } else {
+  if (!state.proxyOk) {
     dot.className = "source-dot offline";
     text.textContent = "solo orario teorico";
+  } else if (age >= STALE_MS) {
+    dot.className = "source-dot stale";
+    text.textContent = `aggiornato ${clock(state.lastRefresh)}`;
+  } else if (state.liveCount) {
+    dot.className = "source-dot live";
+    text.textContent = `in tempo reale · ${rfi.status.proxy ?? ""}`.trim();
+  } else {
+    dot.className = "source-dot live";
+    text.textContent = "nessun treno in corsa";
   }
 }
 
@@ -280,13 +298,21 @@ function renderBanner() {
   const b = $("banner");
   const notes = [];
 
-  if (!state.liveCount && state.lastRefresh) {
+  if (state.lastRefresh && !state.proxyOk) {
     notes.push({
       kind: "warn",
       title: "Ritardi non disponibili",
       body: "Nessuno dei proxy pubblici risponde in questo momento, quindi gli " +
             "orari mostrati sono quelli teorici. Un treno in ritardo chiuderà le " +
             "sbarre più tardi di quanto scritto qui.",
+    });
+  } else if (state.lastRefresh && !state.liveCount) {
+    notes.push({
+      kind: "info",
+      title: "Nessun treno in circolazione",
+      body: "ViaggiaTreno risponde, ma in questo momento sulla tratta non ci sono " +
+            "treni in corsa: gli orari qui sotto sono quelli previsti. " +
+            "I ritardi compariranno da soli quando il servizio riprende.",
     });
   }
   if (!state.exactDay) {
@@ -446,7 +472,12 @@ function renderList() {
   const ul = $("list");
   const now = Date.now();
 
-  ul.innerHTML = state.crossings.map((c) => {
+  // Sulla linea intera i passaggi a livello sono decine: mostrarli tutti
+  // renderebbe illeggibile l'unica cosa che conta, cioe' quelli vicini.
+  const all = state.crossings;
+  const shown = all.slice(0, state.listLimit);
+
+  ul.innerHTML = shown.map((c) => {
     const s = c.now ?? stateAt(c.windows, now);
     const w = s.window;
     const value = s.state === STATE.CLOSED ? countdown(s.seconds)
@@ -462,7 +493,7 @@ function renderList() {
           <span class="crossing-pill ${s.state}"></span>
           <span class="crossing-main">
             <span class="crossing-name">${c.name}${c.calibration.active ? '<span class="calib-badge">calibrato</span>' : ""}</span>
-            <span class="crossing-meta">${formatDistance(c.distance)} · ${c.windows.length} chiusure oggi</span>
+            <span class="crossing-meta">${formatDistance(c.distance)} · ${nearestStation(c)}</span>
           </span>
           <span class="crossing-state ${s.state}">
             <b>${value}</b><span>${label}</span>
@@ -470,6 +501,25 @@ function renderList() {
         </button>
       </li>`;
   }).join("");
+
+  if (all.length > shown.length) {
+    const li = document.createElement("li");
+    li.innerHTML = `<button class="btn ghost wide" id="more">
+      mostra gli altri ${all.length - shown.length} passaggi a livello</button>`;
+    ul.appendChild(li);
+    li.querySelector("#more").onclick = () => {
+      state.listLimit = all.length;
+      renderList();
+    };
+  } else if (all.length > 8) {
+    const li = document.createElement("li");
+    li.innerHTML = `<button class="btn ghost wide" id="less">mostra solo i più vicini</button>`;
+    ul.appendChild(li);
+    li.querySelector("#less").onclick = () => {
+      state.listLimit = 8;
+      renderList();
+    };
+  }
 
   for (const btn of ul.querySelectorAll(".crossing")) {
     btn.onclick = () => {
@@ -480,6 +530,16 @@ function renderList() {
       $("hero").scrollIntoView({ behavior: "smooth", block: "start" });
     };
   }
+}
+
+/** Nome della stazione piu' vicina a un PL: serve a collocarlo sulla linea. */
+function nearestStation(c) {
+  const near = (c.between ?? [])
+    .filter(Boolean)
+    .map((code) => ({ code, d: Math.abs(c.chainage - state.chainByCode.get(code)) }))
+    .sort((a, b) => a.d - b.d)[0];
+  if (!near) return "";
+  return state.geo.stations.find((s) => s.code === near.code)?.name ?? "";
 }
 
 function renderTimeline() {

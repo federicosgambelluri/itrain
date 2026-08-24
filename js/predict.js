@@ -7,7 +7,7 @@
  *
  * Il percorso e' in tre passi:
  *   1. dove si trova il PL lungo il binario   -> la progressiva, gia' calcolata
- *      offline da OpenStreetMap e salvata in data/siderno.json;
+ *      offline da OpenStreetMap e salvata in data/linea.json;
  *   2. quando il treno ci passa sopra          -> interpolazione fra le due
  *      stazioni che lo racchiudono, con un profilo di velocita' realistico;
  *   3. quando le barriere scendono e risalgono -> scarti rispetto al transito,

@@ -1,7 +1,10 @@
-# iTrain — passaggi a livello di Siderno
+# iTrain — passaggi a livello della Ferrovia Jonica
 
 Sapere se il passaggio a livello è aperto, chiuso o sta per chiudersi
 **prima di uscire di casa**, invece di scoprirlo fermi davanti alle sbarre.
+
+Copre **35 passaggi a livello e 36 stazioni** lungo i 204 km della Jonica, da
+Reggio Calabria Centrale a Cropani. L'app mostra sempre quello più vicino a te.
 
 Applicazione web statica: nessun database, nessun server, si pubblica su
 GitHub Pages così com'è.
@@ -25,9 +28,13 @@ previsto e ritardo reale, da ViaggiaTreno. Da lì si ricava tutto il resto.
 ### 1. Dove sta il passaggio a livello, lungo il binario
 
 Calcolato una volta per tutte da OpenStreetMap (`tools/build_data.py`): i
-segmenti della ferrovia Jonica vengono ricuciti in un'unica polilinea di 30 km,
+segmenti della ferrovia Jonica vengono ricuciti in un'unica polilinea di 204 km,
 poi stazioni e passaggi a livello ci vengono proiettati sopra per ottenere la
 **progressiva**, cioè quanti metri di binario li separano.
+
+Sulla tratta intera la ferrovia non è una catena semplice — ci sono raccordi che
+creano biforcazioni — quindi lo script costruisce un grafo dei segmenti e tiene
+il percorso più lungo fra due capilinea, scartando i tronchetti laterali.
 
 | Passaggio a livello | Progressiva | Distanza dalla stazione di Siderno |
 |---|---|---|
@@ -135,44 +142,65 @@ Due workflow già pronti in `.github/workflows/`, che committano da soli:
 
 | Workflow | Quando | Cosa fa |
 |---|---|---|
-| `aggiorna-dati.yml` | ogni notte | riscarica l'orario dei treni |
+| `aggiorna-dati.yml` | ogni notte alle 3:30 | riscarica l'orario dei treni |
 | `aggiorna-passaggi.yml` | il primo del mese | riscarica i PL da OpenStreetMap |
 
-Entrambi rifiutano di committare se il risultato è sospetto (troppo pochi treni,
-o meno di quattro passaggi a livello attorno a Siderno): un file troncato è
-peggio di uno vecchio.
+Entrambi rifiutano di committare se il risultato è sospetto — troppo pochi
+treni, poche fermate medie per treno, meno di quattro PL attorno a Siderno, o
+due stazioni con lo stesso codice: un file troncato è peggio di uno vecchio.
 
-Perché serve una notte per giorno della settimana: ViaggiaTreno non restituisce
-i treni già passati, quindi l'orario si costruisce per accumulo, annotando in
-quali giorni ciascun treno circola. Finché un giorno è coperto solo in parte
-l'app lo dichiara invece di far finta di niente.
+**L'orario notturno non è una comodità, è un vincolo.** ViaggiaTreno impone due
+limiti che insieme decidono la forma dello scanner:
+
+- `partenze` e `arrivi` non restituiscono i treni già passati;
+- `andamentoTreno` — l'unico che dà tutte le fermate di un treno in una sola
+  chiamata — risponde soltanto per i treni con data di partenza odierna.
+
+A notte fonda entrambi spariscono: la giornata è tutta davanti. È questo che
+rende il costo indipendente dal numero di stazioni: interrogarle tutte una per
+una richiederebbe oltre milleseicento chiamate al giorno, mentre così ne bastano
+circa duecentocinquanta indipendentemente da quanto è lunga la tratta.
+
+L'orario si costruisce per accumulo, annotando in quali giorni della settimana
+ciascun treno circola. Finché un giorno è coperto solo in parte l'app lo
+dichiara invece di far finta di niente.
 
 A mano:
 
 ```bash
-python3 tools/build_timetable.py --day-offset 1   # orario di domani
-python3 tools/build_data.py                       # geometria e PL
-node tools/test_predict.mjs                       # prova il motore senza rete
+python3 tools/build_timetable.py            # orario di oggi (da lanciare di notte)
+python3 tools/build_timetable.py --reset    # ricostruisce da zero
+python3 tools/build_data.py                 # geometria, stazioni e PL
+node tools/test_predict.mjs                 # prova il motore senza rete
 ```
 
 ---
 
-## Estendere ad altre località
+## Estendere ad altre linee
 
-L'architettura è già pronta. Per aggiungere una zona:
+Serve cambiare **due valori** in `tools/build_data.py`: `BBOX` (il riquadro
+geografico) e `LINE_REF` (il numero della linea in OpenStreetMap). Poi si
+rigenerano i dati. Nient'altro.
 
-1. In `tools/build_data.py` cambia `BBOX` con il riquadro che ti interessa e
-   aggiungi le stazioni a `STATION_CODES` (il codice si trova con
-   `curl "http://www.viaggiatreno.it/infomobilitamobile/resteasy/viaggiatreno/cercaStazione/NOME"`).
-2. Se un passaggio a livello sta su una strada senza `name` in OpenStreetMap,
-   dagli un nome in `NAME_OVERRIDES`. È anche il posto giusto per correggere un
-   nome sbagliato dopo una verifica sul campo.
-3. In `tools/build_timetable.py` non serve toccare nulla: legge le stazioni da
-   `data/siderno.json`.
-4. Rigenera i due file dati.
+Le stazioni non vanno più elencate a mano. Lo script le prende da
+OpenStreetMap e ne ricava il codice RFI cercandone il nome su ViaggiaTreno,
+**verificando poi con le coordinate**: se la stazione trovata dista più di 600
+metri dal nodo OSM, l'abbinamento viene scartato.
 
-Il codice non ha nulla di specifico su Siderno oltre a questi valori: PL,
-stazioni e progressive arrivano tutti dai file in `data/`.
+Quella verifica non è formale. `cercaStazione` cerca per prefisso e restituisce
+comunque un risultato anche quando non c'è corrispondenza: alla richiesta
+"REGGIO DI CALABRIA AEROPORTO" risponde "REGGIO DI CALABRIA ARCHI", che è
+tutt'altra stazione. Senza il controllo sulle coordinate quell'errore
+entrerebbe nei dati in silenzio. C'è anche un controllo sui codici duplicati,
+perché una stessa stazione mappata due volte in OpenStreetMap — succede, ad
+esempio a Catanzaro Lido — non deve generare un doppione.
+
+Resta manuale una cosa sola: `NAME_OVERRIDES`, per i passaggi a livello che
+stanno su strade senza `name` in OpenStreetMap. È anche il posto giusto per
+correggere un nome sbagliato dopo una verifica sul campo.
+
+Il codice non ha nulla di specifico su una località: PL, stazioni e progressive
+arrivano tutti dai file in `data/`.
 
 ---
 
@@ -189,7 +217,8 @@ js/notify.js          avvisi programmati
 js/geo.js             distanze e geolocalizzazione
 js/app.js             interfaccia e composizione
 sw.js                 cache offline
-data/siderno.json     linea, stazioni, passaggi a livello, parametri del modello
+js/theme.js           tema chiaro, scuro o automatico
+data/linea.json       linea, stazioni, passaggi a livello, parametri del modello
 data/timetable.json   orario di riferimento, rete di sicurezza
 tools/                generatori dei dati e prova del motore
 ```

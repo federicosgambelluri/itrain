@@ -32,26 +32,31 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, sys
-          d = json.load(open("data/siderno.json"))
+          d = json.load(open("data/linea.json"))
           pl, st = d["crossings"], d["stations"]
           print(f"{len(pl)} passaggi a livello, {len(st)} stazioni")
-          if len(pl) < 5 or len(st) < 4:
+          if len(pl) < 25 or len(st) < 25:
               sys.exit("dati troppo scarni: non committo")
           # I quattro di Siderno sono il motivo per cui esiste l'app: se
           # sparissero da OpenStreetMap va segnalato, non committato in silenzio.
           siderno = [c for c in pl if "S11850" in c["between"]]
           if len(siderno) < 4:
               sys.exit(f"solo {len(siderno)} PL attorno a Siderno: verificare a mano")
+          # Un codice stazione ripetuto significa un abbinamento sbagliato
+          # fra OpenStreetMap e ViaggiaTreno.
+          codes = [s["code"] for s in st]
+          if len(codes) != len(set(codes)):
+              sys.exit("codici stazione duplicati: abbinamento da verificare")
           PY
 
       - name: Committa se qualcosa e' cambiato
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- data/siderno.json; then
+          if git diff --quiet -- data/linea.json; then
             echo "nessuna variazione"
             exit 0
           fi
-          git add data/siderno.json
+          git add data/linea.json
           git commit -m "Aggiorna posizione dei passaggi a livello da OpenStreetMap"
           git push

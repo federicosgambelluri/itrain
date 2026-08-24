@@ -19,7 +19,7 @@ const SHELL = [
   "js/calibration.js",
   "js/notify.js",
   "js/theme.js",
-  "data/siderno.json",
+  "data/linea.json",
   "data/timetable.json",
   "manifest.json",
   "icons/icon.svg",

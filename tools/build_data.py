@@ -1,62 +1,82 @@
 #!/usr/bin/env python3
 """
-Costruisce data/siderno.json a partire da OpenStreetMap.
+Costruisce data/linea.json: la ferrovia Jonica con stazioni e passaggi a
+livello, ciascuno con la sua progressiva lungo il binario.
 
-Produce:
-  - la polilinea della Ferrovia Jonica (ref 145) ricucita e ordinata
-  - stazioni e passaggi a livello proiettati sulla linea (progressiva in metri)
+La progressiva e' la chiave di tutto: dice quanti metri di rotaia separano un
+passaggio a livello dalle stazioni che lo racchiudono, ed e' cio' che permette
+poi di interpolare quando il treno ci passa sopra.
 
-La "progressiva" (chainage) e' la chiave di tutto: permette di sapere quanti
-metri di binario ci sono fra una stazione e un passaggio a livello, e quindi
-di interpolare quando il treno ci passa sopra.
+Le stazioni arrivano da OpenStreetMap per la posizione e da ViaggiaTreno per il
+codice. Il collegamento fra i due mondi si fa cercando il nome OSM su
+ViaggiaTreno e poi *verificando con le coordinate*: se la stazione trovata dista
+piu' di 800 metri dal nodo OSM, l'abbinamento e' sbagliato e viene scartato.
+Cosi' l'elenco si estende da solo a nuove tratte senza tabelle scritte a mano.
 """
-import json, math, subprocess, sys, time
+import argparse, json, math, subprocess, sys, time
 
 OVERPASS = "https://overpass-api.de/api/interpreter"
-# Da Ardore a Roccella Jonica: copre Siderno con ampio margine su entrambi i lati
-BBOX = (38.16, 16.18, 38.34, 16.42)
+VT = "http://www.viaggiatreno.it/infomobilitamobile/resteasy/viaggiatreno"
 
-# Codici stazione di ViaggiaTreno. OSM e RFI usano nomi diversi, quindi il
-# ponte fra i due mondi va dichiarato a mano (sono cinque stazioni).
-STATION_CODES = {
-    "Ardore": "S11853",
-    "Locri": "S11851",
-    "Siderno": "S11850",
-    "Gioiosa Jonica": "S11848",
-    "Roccella Jonica": "S11847",
-}
+# Tutta la Jonica calabrese, da Reggio Calabria a oltre Catanzaro Lido.
+BBOX = (37.90, 15.55, 38.95, 16.85)
+LINE_REF = "145"
 
-# Alcuni PL stanno su tratti stradali senza tag "name" in OSM. Qui si corregge
-# a mano il nome mostrato: e' anche il posto giusto per sistemare un nome
-# sbagliato dopo una verifica sul campo.
+# Distanza massima dalla linea per considerare un nodo "sulla Jonica": serve a
+# escludere la Tirrenica e le stazioni di altre linee che cadono nel riquadro.
+MAX_OFF_STATION = 250
+MAX_OFF_CROSSING = 60
+# Due nodi PL piu' vicini di cosi' sono lo stesso attraversamento stradale
+# mappato piu' volte (uno per binario, o doppia mappatura).
+MERGE_WITHIN = 40
+# Scarto massimo fra la stazione OSM e quella ViaggiaTreno perche' l'abbinamento
+# sia credibile. cercaStazione risponde per prefisso e restituisce comunque
+# qualcosa anche quando non c'e' corrispondenza (a "AEROPORTO" propone "ARCHI"),
+# quindi la verifica sulle coordinate e' l'unica difesa contro gli abbinamenti
+# sbagliati.
+MATCH_WITHIN = 600
+
 NAME_OVERRIDES = {
     1820420755: "Via Cristoforo Colombo",
 }
 
 
-def overpass(query, tries=4):
-    """Interroga Overpass via curl (il Python di sistema non ha i certificati CA).
+# ------------------------------------------------------------------ #
+# Rete
+# ------------------------------------------------------------------ #
 
-    Overpass limita le richieste ravvicinate e in quel caso risponde con un
-    corpo vuoto o con HTML: riprovo con backoff crescente.
-    """
+def _curl(args, tries, what):
     last = ""
     for n in range(tries):
         if n:
-            wait = 5 * n
-            print(f"    Overpass non ha risposto, riprovo fra {wait}s...", file=sys.stderr)
+            wait = 4 * n
+            print(f"    {what} non risponde, riprovo fra {wait}s...", file=sys.stderr)
             time.sleep(wait)
-        r = subprocess.run(
-            ["curl", "-s", "-m", "180", "-G", OVERPASS, "--data-urlencode", "data=" + query],
-            capture_output=True, text=True)
+        r = subprocess.run(args, capture_output=True, text=True)
         last = r.stdout.strip()
-        if last.startswith("{"):
+        if last.startswith(("{", "[")):
             try:
                 return json.loads(last)
             except json.JSONDecodeError:
                 pass
-    raise RuntimeError(f"Overpass non risponde dopo {tries} tentativi: {last[:200]!r}")
+        if last == "":
+            return None      # risposta vuota legittima (es. stazione sconosciuta)
+    raise RuntimeError(f"{what} non risponde dopo {tries} tentativi: {last[:160]!r}")
 
+
+def overpass(query, tries=4):
+    """Overpass via curl: il Python di sistema non ha i certificati CA."""
+    return _curl(["curl", "-s", "-m", "240", "-G", OVERPASS,
+                  "--data-urlencode", "data=" + query], tries, "Overpass")
+
+
+def vt(path, tries=3):
+    return _curl(["curl", "-s", "-m", "40", VT + path], tries, "ViaggiaTreno")
+
+
+# ------------------------------------------------------------------ #
+# Geometria
+# ------------------------------------------------------------------ #
 
 def haversine(a, b):
     R = 6371008.8
@@ -67,85 +87,123 @@ def haversine(a, b):
     return 2 * R * math.asin(math.sqrt(h))
 
 
-def fetch_ways():
-    s, w, n, e = BBOX
-    q = f'''[out:json][timeout:120];
-    way["railway"="rail"]["ref"="145"]
-       ["service"!~"."]({s},{w},{n},{e});
-    out geom;'''
-    return overpass(q)["elements"]
+def key(pt):
+    return (round(pt[0], 7), round(pt[1], 7))
 
 
 def stitch(ways):
-    """Ricuce i segmenti OSM in un'unica polilinea ordinata.
+    """Ricuce i segmenti OSM nella linea principale.
 
-    Indicizza per estremo invece di identificare i segmenti per id(): la linea
-    e' una catena semplice con due soli estremi di grado 1, quindi si percorre
-    linearmente partendo da uno dei due capi.
+    Sulla tratta intera la ferrovia non e' una catena semplice: ci sono
+    raccordi che creano biforcazioni. Si costruisce quindi un grafo dei
+    segmenti e si tiene il percorso piu' lungo fra due capilinea, che e' la
+    linea vera; i tronchetti laterali restano fuori.
     """
     segs = []
-    for way in ways:
-        g = [(p["lat"], p["lon"]) for p in way.get("geometry", [])]
+    for w in ways:
+        g = [(p["lat"], p["lon"]) for p in w.get("geometry", [])]
         if len(g) >= 2:
             segs.append(g)
 
-    def key(pt):
-        return (round(pt[0], 7), round(pt[1], 7))
+    length = [sum(haversine(g[i - 1], g[i]) for i in range(1, len(g))) for g in segs]
 
-    # estremo -> lista di indici dei segmenti che vi terminano
-    at = {}
+    adj = {}
     for i, g in enumerate(segs):
-        at.setdefault(key(g[0]), []).append(i)
-        at.setdefault(key(g[-1]), []).append(i)
+        adj.setdefault(key(g[0]), []).append(i)
+        adj.setdefault(key(g[-1]), []).append(i)
 
-    terminals = [k for k, v in at.items() if len(v) == 1]
+    terminals = [k for k, v in adj.items() if len(v) == 1]
+    print(f"  {len(segs)} segmenti, {len(terminals)} capilinea, "
+          f"{sum(1 for v in adj.values() if len(v) > 2)} biforcazioni", file=sys.stderr)
     if not terminals:
-        raise RuntimeError("nessun capolinea: la linea non e' una catena semplice")
+        raise RuntimeError("nessun capolinea: impossibile orientare la linea")
 
-    start_k = min(terminals)           # deterministico fra i due capi
-    cur = at[start_k][0]
-    seg = segs[cur]
-    if key(seg[-1]) == start_k:
-        seg = seg[::-1]
-    line = list(seg)
-    used = {cur}
-
-    while True:
-        tail = key(line[-1])
-        nxt = [i for i in at.get(tail, []) if i not in used]
-        if not nxt:
-            break
-        i = nxt[0]
+    def other_end(i, k):
         g = segs[i]
-        if key(g[-1]) == tail:
-            g = g[::-1]
-        line.extend(g[1:])
-        used.add(i)
+        a, b = key(g[0]), key(g[-1])
+        return b if k == a else a
 
-    if len(used) != len(segs):
-        print(f"  ATTENZIONE: {len(segs)-len(used)} segmenti non ricuciti",
-              file=sys.stderr)
-    print(f"  ricuciti {len(used)}/{len(segs)} segmenti -> {len(line)} punti",
-          file=sys.stderr)
+    def dijkstra(src):
+        import heapq
+        dist = {src: 0.0}
+        prev = {}
+        pq = [(0.0, src)]
+        while pq:
+            d, u = heapq.heappop(pq)
+            if d > dist.get(u, math.inf):
+                continue
+            for i in adj.get(u, []):
+                v = other_end(i, u)
+                nd = d + length[i]
+                if nd < dist.get(v, math.inf):
+                    dist[v] = nd
+                    prev[v] = (u, i)
+                    heapq.heappush(pq, (nd, v))
+        return dist, prev
+
+    best = (None, None, -1.0)
+    for t in terminals:
+        dist, _ = dijkstra(t)
+        for u in terminals:
+            if u != t and dist.get(u, -1) > best[2]:
+                best = (t, u, dist[u])
+    src, dst, total = best
+    print(f"  percorso principale: {total/1000:.1f} km", file=sys.stderr)
+
+    _, prev = dijkstra(src)
+    chain = []
+    cur = dst
+    while cur != src:
+        u, i = prev[cur]
+        chain.append((i, u, cur))
+        cur = u
+    chain.reverse()
+
+    line = []
+    for i, frm, _to in chain:
+        g = segs[i]
+        if key(g[-1]) == frm:
+            g = g[::-1]
+        line.extend(g if not line else g[1:])
     return line
 
 
 def chainages(line):
-    """Progressiva cumulativa in metri per ogni vertice della polilinea."""
     out = [0.0]
     for i in range(1, len(line)):
         out.append(out[-1] + haversine(line[i - 1], line[i]))
     return out
 
 
-def project(pt, line, cum):
-    """Proietta un punto sulla polilinea. Ritorna (progressiva_m, scarto_m)."""
-    best = (None, float("inf"))
-    lat0 = math.radians(pt[0])
-    mx = math.cos(lat0) * 111320.0
+def build_index(line, cum, cell=0.02):
+    """Griglia per non confrontare ogni punto con tutti i segmenti della linea.
+
+    Sui 234 km la linea ha decine di migliaia di vertici: senza indice la
+    proiezione di duecento nodi diventa insostenibile.
+    """
+    grid = {}
+    for i in range(len(line) - 1):
+        for pt in (line[i], line[i + 1]):
+            grid.setdefault((int(pt[0] / cell), int(pt[1] / cell)), set()).add(i)
+    return grid, cell
+
+
+def project(pt, line, cum, index):
+    """Proietta un punto sulla linea. Ritorna (progressiva_m, scarto_m)."""
+    grid, cell = index
+    gi, gj = int(pt[0] / cell), int(pt[1] / cell)
+    cand = set()
+    for di in (-1, 0, 1):
+        for dj in (-1, 0, 1):
+            cand |= grid.get((gi + di, gj + dj), set())
+    if not cand:
+        return None, math.inf
+
+    mx = math.cos(math.radians(pt[0])) * 111320.0
     my = 110540.0
     px, py = pt[1] * mx, pt[0] * my
-    for i in range(len(line) - 1):
+    best = (None, math.inf)
+    for i in cand:
         ax, ay = line[i][1] * mx, line[i][0] * my
         bx, by = line[i + 1][1] * mx, line[i + 1][0] * my
         dx, dy = bx - ax, by - ay
@@ -158,100 +216,197 @@ def project(pt, line, cum):
     return best
 
 
+# ------------------------------------------------------------------ #
+# Abbinamento stazione OSM -> codice ViaggiaTreno
+# ------------------------------------------------------------------ #
+
+def _variants(name):
+    """Nomi da provare su cercaStazione, dal piu' specifico al piu' generico.
+
+    ViaggiaTreno abbrevia i santi ("S.ANDREA DELLO JONIO") e usa l'apostrofo
+    dove OpenStreetMap usa l'accento ("ANNA'" contro "Anna"). La ricerca inoltre
+    funziona per prefisso, quindi "ANDREA" non trova nulla mentre "S.ANDREA" si.
+    """
+    base = (name.upper()
+            .replace("À", "A'").replace("È", "E'").replace("É", "E'")
+            .replace("Ì", "I'").replace("Ò", "O'").replace("Ù", "U'"))
+    out = [base]
+
+    santo = base
+    for pref in ("SANT'", "SANTA ", "SANTO ", "SAN "):
+        if santo.startswith(pref):
+            santo = "S." + santo[len(pref):].lstrip()
+            out.append(santo)
+            break
+    # anche in mezzo al nome: "MOTTA SAN GIOVANNI" -> "MOTTA S.GIOVANNI"
+    for pref in (" SANT'", " SANTA ", " SANTO ", " SAN "):
+        if pref in base:
+            out.append(base.replace(pref, " S."))
+
+    for cand in list(out):
+        words = cand.replace("-", " ").split()
+        for n in (3, 2, 1):
+            if len(words) > n:
+                out.append(" ".join(words[:n]))
+
+    seen, uniq = set(), []
+    for v in out:
+        v = v.strip()
+        if v and v not in seen:
+            seen.add(v)
+            uniq.append(v)
+    return uniq
+
+
+def resolve_code(name, pt, cache):
+    """Codice ViaggiaTreno per una stazione OSM, verificato sulle coordinate.
+
+    Ritorna (codice, distanza_m, nome_viaggiatreno) oppure None.
+    """
+    best = None
+    for attempt in _variants(name):
+        found = vt("/cercaStazione/" + attempt.replace(" ", "%20"))
+        if not found:
+            continue
+        for cand in found:
+            code = cand.get("id")
+            if not code:
+                continue
+            if code not in cache:
+                det = vt(f"/dettaglioStazione/{code}/1")
+                cache[code] = (det or {}).get("lat") and (det["lat"], det["lon"])
+            coords = cache[code]
+            if not coords:
+                continue
+            d = haversine(pt, coords)
+            if d < MATCH_WITHIN and (best is None or d < best[1]):
+                best = (code, d, cand.get("nomeLungo"))
+        if best and best[1] < 120:
+            break     # abbinamento gia' ottimo, inutile provare varianti piu' larghe
+    return best
+
+
+# ------------------------------------------------------------------ #
+
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default="data/linea.json")
+    ap.add_argument("--keep-geometry", action="store_true",
+                    help="include la polilinea nel file (il frontend non la usa)")
+    args = ap.parse_args()
+
     s, w, n, e = BBOX
-    print("Scarico la linea...", file=sys.stderr)
-    line = stitch(fetch_ways())
+    print("Scarico la linea da OpenStreetMap...", file=sys.stderr)
+    ways = overpass(f'[out:json][timeout:240];'
+                    f'way["railway"="rail"]["ref"="{LINE_REF}"]["service"!~"."]'
+                    f'({s},{w},{n},{e});out geom;')["elements"]
+    line = stitch(ways)
     cum = chainages(line)
-    print(f"  lunghezza linea: {cum[-1]/1000:.2f} km", file=sys.stderr)
+    index = build_index(line, cum)
+    print(f"  {len(line)} vertici, {cum[-1]/1000:.1f} km", file=sys.stderr)
 
-    print("Scarico PL e stazioni...", file=sys.stderr)
-    q = f'''[out:json][timeout:120];
-    ( node["railway"="level_crossing"]({s},{w},{n},{e});
-      node["railway"="station"]({s},{w},{n},{e});
-      node["railway"="halt"]({s},{w},{n},{e}); );
-    out body;'''
-    nodes = overpass(q)["elements"]
-
-    xings_raw = [x for x in nodes if x["tags"].get("railway") == "level_crossing"]
-
-    # nome della strada: le way stradali che passano per quel nodo.
-    # Una sola chiamata: Overpass limita le richieste ravvicinate.
-    roads = {}
-    if xings_raw:
-        ids = ",".join(str(x["id"]) for x in xings_raw)
-        try:
-            time.sleep(6)
-            rr = overpass(f'[out:json][timeout:120];'
-                          f'node(id:{ids})->.p;way(bn.p)["highway"];out body;')
-            for el in rr.get("elements", []):
-                if el.get("type") != "way":
-                    continue
-                t = el.get("tags", {})
-                nm = t.get("name") or t.get("ref")
-                if not nm:
-                    continue
-                for nid in el.get("nodes", []):
-                    roads.setdefault(nid, nm)
-        except Exception as ex:
-            print(f"  (nomi strade non recuperati: {ex})", file=sys.stderr)
+    print("Scarico stazioni e passaggi a livello...", file=sys.stderr)
+    time.sleep(3)
+    nodes = overpass(f'''[out:json][timeout:240];
+      ( node["railway"="level_crossing"]({s},{w},{n},{e});
+        node["railway"="station"]({s},{w},{n},{e});
+        node["railway"="halt"]({s},{w},{n},{e}); );
+      out body;''')["elements"]
 
     stations, xings = [], []
     for el in nodes:
         t = el["tags"]
         rw = t.get("railway")
         pt = (el["lat"], el["lon"])
-        ch, off = project(pt, line, cum)
-        if rw in ("station", "halt"):
-            stations.append({
-                "osm_id": el["id"], "name": t.get("name", "?"),
-                "lat": el["lat"], "lon": el["lon"],
-                "chainage": round(ch, 1), "offset": round(off, 1),
-            })
-        elif rw == "level_crossing":
-            xings.append({
-                "osm_id": el["id"],
-                "road": roads.get(el["id"]),
-                "barrier": t.get("crossing:barrier"),
-                "lat": el["lat"], "lon": el["lon"],
-                "chainage": round(ch, 1), "offset": round(off, 1),
-            })
+        ch, off = project(pt, line, cum, index)
+        if ch is None:
+            continue
+        if rw in ("station", "halt") and off < MAX_OFF_STATION:
+            stations.append({"osm_id": el["id"], "name": t.get("name") or "?",
+                             "lat": el["lat"], "lon": el["lon"],
+                             "chainage": round(ch, 1), "offset": round(off, 1)})
+        elif rw == "level_crossing" and off < MAX_OFF_CROSSING:
+            xings.append({"osm_id": el["id"], "barrier": t.get("crossing:barrier"),
+                          "lat": el["lat"], "lon": el["lon"],
+                          "chainage": round(ch, 1), "offset": round(off, 1)})
 
-    # scarta i nodi troppo lontani dalla linea principale (probabili raccordi)
-    stations = [x for x in stations if x["offset"] < 250]
-    xings = [x for x in xings if x["offset"] < 60]
+    stations = [x for x in stations if x["name"] != "?"]
     stations.sort(key=lambda x: x["chainage"])
     xings.sort(key=lambda x: x["chainage"])
+    print(f"  sulla linea: {len(stations)} stazioni, {len(xings)} nodi PL", file=sys.stderr)
 
-    # OSM mappa lo stesso attraversamento stradale come piu' nodi (un nodo per
-    # binario, o doppia mappatura). Fondo i nodi entro 40 m di progressiva:
-    # per l'utente in auto sono un unico passaggio a livello.
+    # nomi delle strade
+    print("Recupero i nomi delle strade...", file=sys.stderr)
+    roads = {}
+    for chunk in [xings[i:i + 120] for i in range(0, len(xings), 120)]:
+        ids = ",".join(str(x["osm_id"]) for x in chunk)
+        time.sleep(4)
+        try:
+            rr = overpass(f'[out:json][timeout:200];node(id:{ids})->.p;'
+                          f'way(bn.p)["highway"];out body;')
+            for el in rr.get("elements", []):
+                nm = el.get("tags", {}).get("name") or el.get("tags", {}).get("ref")
+                if el.get("type") == "way" and nm:
+                    for nid in el.get("nodes", []):
+                        roads.setdefault(nid, nm)
+        except Exception as ex:
+            print(f"  (nomi non recuperati per un blocco: {ex})", file=sys.stderr)
+
+    # fusione dei nodi che sono lo stesso attraversamento
     merged = []
     for x in xings:
-        if merged and abs(x["chainage"] - merged[-1]["chainage"]) < 40:
+        x["road"] = NAME_OVERRIDES.get(x["osm_id"]) or roads.get(x["osm_id"])
+        if merged and abs(x["chainage"] - merged[-1]["chainage"]) < MERGE_WITHIN:
             g = merged[-1]
             g["osm_ids"].append(x["osm_id"])
             g["road"] = g["road"] or x["road"]
-            # "full" (barriere complete) vince su "half"/"yes"/ignoto
             if x["barrier"] == "full" or not g["barrier"]:
                 g["barrier"] = x["barrier"] or g["barrier"]
             if x["offset"] < g["offset"]:
-                g["lat"], g["lon"] = x["lat"], x["lon"]
-                g["chainage"], g["offset"] = x["chainage"], x["offset"]
+                g.update({"lat": x["lat"], "lon": x["lon"],
+                          "chainage": x["chainage"], "offset": x["offset"]})
             continue
         y = dict(x)
         y["osm_ids"] = [y.pop("osm_id")]
         merged.append(y)
-    print(f"  {len(xings)} nodi PL -> {len(merged)} attraversamenti distinti",
-          file=sys.stderr)
     xings = merged
+    print(f"  -> {len(xings)} attraversamenti distinti", file=sys.stderr)
 
-    for x in xings:
-        for nid in x["osm_ids"]:
-            if nid in NAME_OVERRIDES:
-                x["road"] = NAME_OVERRIDES[nid]
-                break
+    # codici ViaggiaTreno
+    print(f"Abbino {len(stations)} stazioni a ViaggiaTreno...", file=sys.stderr)
+    cache = {}
+    matched, unmatched = [], []
+    for st in stations:
+        got = resolve_code(st["name"], (st["lat"], st["lon"]), cache)
+        if got:
+            st["code"], st["match_m"], st["vt_name"] = got
+            matched.append(st)
+        else:
+            unmatched.append(st["name"])
 
+    # Uno stesso codice non puo' appartenere a due stazioni: quando succede
+    # l'abbinamento e' sbagliato per almeno una delle due. Si tiene la piu'
+    # vicina e l'altra si scarta, invece di lasciare un doppione silenzioso.
+    by_code = {}
+    for st in matched:
+        cur = by_code.get(st["code"])
+        if cur is None or st["match_m"] < cur["match_m"]:
+            if cur is not None:
+                unmatched.append(f"{cur['name']} (codice {cur['code']} gia' assegnato)")
+            by_code[st["code"]] = st
+        else:
+            unmatched.append(f"{st['name']} (codice {st['code']} gia' assegnato)")
+
+    known = sorted(by_code.values(), key=lambda x: x["chainage"])
+    for st in known:
+        print(f"  {st['name']:34s} -> {st['code']}  ({st['vt_name']}, {st['match_m']:.0f} m)",
+              file=sys.stderr)
+    if unmatched:
+        print(f"\n  {len(unmatched)} stazioni senza codice, escluse:", file=sys.stderr)
+        for u in unmatched:
+            print(f"    - {u}", file=sys.stderr)
+
+    # slug e stazioni di riferimento
     def slug(x):
         base = x["road"] or f"km-{x['chainage']/1000:.3f}"
         keep = "".join(c.lower() if c.isalnum() else "-" for c in base)
@@ -259,66 +414,51 @@ def main():
             keep = keep.replace("--", "-")
         return "pl-" + keep.strip("-")
 
-    for st in stations:
-        st["code"] = STATION_CODES.get(st["name"])
-    known = [st for st in stations if st["code"]]
-    if len(known) != len(stations):
-        missing = [st["name"] for st in stations if not st["code"]]
-        print(f"  ATTENZIONE: stazioni senza codice RFI: {missing}", file=sys.stderr)
-
+    seen = {}
     for x in xings:
-        x["id"] = slug(x)
+        base = slug(x)
+        seen[base] = seen.get(base, 0) + 1
+        x["id"] = base if seen[base] == 1 else f"{base}-{seen[base]}"
         x["name"] = x["road"] or f"PL km {x['chainage']/1000:.1f}"
-        # stazione precedente e successiva lungo la linea: sono i due punti fra
-        # cui interpolare l'orario di passaggio del treno sul PL
         before = [st for st in known if st["chainage"] <= x["chainage"]]
         after = [st for st in known if st["chainage"] > x["chainage"]]
         x["between"] = [before[-1]["code"] if before else None,
                         after[0]["code"] if after else None]
         x.pop("road", None)
 
+    # un PL senza almeno una stazione per lato non e' interpolabile
+    usable = [x for x in xings if x["between"][0] and x["between"][1]]
+    if len(usable) != len(xings):
+        print(f"  {len(xings)-len(usable)} PL fuori dalle stazioni note, esclusi",
+              file=sys.stderr)
+
     out = {
         "generated": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "source": "OpenStreetMap (ODbL) + codici stazione RFI/ViaggiaTreno",
-        "line": {
-            "name": "Ferrovia Jonica", "ref": "145",
-            "length_m": round(cum[-1], 1),
-            "geometry": [[round(p[0], 5), round(p[1], 5)] for p in line],
-        },
+        "source": "OpenStreetMap (ODbL) + ViaggiaTreno (RFI)",
+        "line": {"name": "Ferrovia Jonica", "ref": LINE_REF,
+                 "length_m": round(cum[-1], 1)},
         "stations": [{k: st[k] for k in ("code", "name", "lat", "lon", "chainage")}
                      for st in known],
-        "crossings": [{k: x[k] for k in
-                       ("id", "name", "lat", "lon", "chainage", "barrier",
-                        "between", "osm_ids")} for x in xings],
+        "crossings": [{k: x[k] for k in ("id", "name", "lat", "lon", "chainage",
+                                         "barrier", "between", "osm_ids")}
+                      for x in usable],
         "model": {
-            # Il PL si chiude quando il treno impegna il circuito a monte.
-            # Fonte RFI: circa 2,5 minuti prima del passaggio. E' il valore di
-            # partenza, poi l'app lo calibra per singolo PL sulle osservazioni.
             "lead_close_s": 150,
-            # riapertura: sgombero del treno + risalita delle barriere
             "lead_open_s": 40,
-            # accelerazione/decelerazione media di un regionale, m/s^2
             "accel": 0.5,
-            # velocita' massima di linea: senza questo limite gli orari piu'
-            # stretti richiederebbero al modello velocita' irrealistiche
             "vmax_ms": round(120 / 3.6, 2),
-            "vmax_note": "120 km/h, velocita' di rango sulla Jonica in questo tratto",
+            "vmax_note": "120 km/h, velocita' di rango sulla Jonica",
         },
     }
-    with open("data/siderno.json", "w") as f:
+    if args.keep_geometry:
+        out["line"]["geometry"] = [[round(p[0], 5), round(p[1], 5)] for p in line]
+
+    with open(args.out, "w") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 
     import os
-    kb = os.path.getsize("data/siderno.json") / 1024
-    print(f"\ndata/siderno.json scritto ({kb:.0f} KB)", file=sys.stderr)
-    print(f"{len(known)} stazioni, {len(xings)} passaggi a livello\n", file=sys.stderr)
-    for st in known:
-        print(f"  STAZ  km {st['chainage']/1000:7.3f}  {st['code']}  {st['name']}")
-    print()
-    for x in xings:
-        a, b = x["between"]
-        print(f"  PL    km {x['chainage']/1000:7.3f}  {x['name']:28s} "
-              f"barriere={x['barrier'] or '?':5s} fra {a}/{b}")
+    print(f"\n{args.out}: {len(known)} stazioni, {len(usable)} passaggi a livello, "
+          f"{os.path.getsize(args.out)/1024:.0f} KB", file=sys.stderr)
 
 
 if __name__ == "__main__":

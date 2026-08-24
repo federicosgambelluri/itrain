@@ -1,38 +1,48 @@
 #!/usr/bin/env python3
 """
-Costruisce data/timetable.json: l'orario teorico dei treni che passano per le
-stazioni note, con l'ora di transito a ciascuna.
+Costruisce data/timetable.json: l'orario teorico dei treni della Jonica, con
+l'ora di transito a ogni stazione della tratta.
 
-Serve come rete di sicurezza. Avendo scelto solo proxy pubblici, l'app deve
-poter mostrare le chiusure previste anche quando nessun proxy risponde: in quel
-caso usa questo file e avvisa che i ritardi reali non sono disponibili.
+E' la rete di sicurezza dell'app. Avendo scelto solo proxy pubblici, quando
+nessuno risponde l'app deve poter mostrare comunque le chiusure previste: in
+quel caso usa questo file e dichiara che i ritardi reali non sono disponibili.
 
-ViaggiaTreno non restituisce i treni gia' passati, quindi la giornata va
-scansionata quando e' ancora tutta davanti: di default si guarda a domani.
+Perche' va eseguito di notte
+----------------------------
+ViaggiaTreno ha due limiti che insieme decidono la forma dello script:
 
-Gli orari non arrivano da andamentoTreno (che risponde solo per i treni con
-data di partenza odierna, e quindi non permette di guardare avanti) ma da
-partenze/arrivi interrogati su ogni stazione della tratta: l'unione dei due
-elenchi da', per ogni treno, l'ora di transito a ciascuna stazione. Sono le
-due ancore fra cui l'app interpola il passaggio sul singolo PL.
+  - partenze/arrivi non restituiscono i treni gia' passati;
+  - andamentoTreno risponde solo per i treni con data di partenza odierna,
+    quindi non si puo' guardare avanti di un giorno.
 
-Il file si costruisce per accumulo: ogni esecuzione fonde i treni visti con
-quelli gia' noti e annota in quali giorni della settimana ciascuno circola,
-cosi' dopo una settimana la distinzione feriale/festivo e' completa.
+Eseguito a notte fonda entrambi i limiti spariscono: la giornata e' tutta
+davanti, e andamentoTreno da' l'intero elenco delle fermate di ogni treno in
+una sola chiamata. E' cio' che rende il costo indipendente dal numero di
+stazioni: interrogarle tutte una per una ne richiederebbe oltre milleseicento.
+
+Il file si costruisce per accumulo, annotando in quali giorni della settimana
+ciascun treno circola: dopo una settimana di esecuzioni notturne la distinzione
+feriale/festivo e' completa.
 """
 import argparse, json, os, subprocess, sys, time
 from datetime import datetime, timedelta
 
 VT = "http://www.viaggiatreno.it/infomobilitamobile/resteasy/viaggiatreno"
 OUT = "data/timetable.json"
+LINE = "data/linea.json"
 GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
+
+# Quante stazioni usare come punti di raccolta dei treni. Non serve
+# interrogarle tutte: ne bastano alcune distribuite lungo la linea, perche'
+# ogni treno ne attraversa almeno una.
+HUBS = 5
 
 
 def get(path, tries=3):
     for n in range(tries):
         if n:
             time.sleep(2 * n)
-        r = subprocess.run(["curl", "-s", "-m", "40", VT + path],
+        r = subprocess.run(["curl", "-s", "-m", "45", VT + path],
                            capture_output=True, text=True)
         body = r.stdout.strip()
         if body.startswith(("[", "{")):
@@ -41,101 +51,112 @@ def get(path, tries=3):
             except json.JSONDecodeError:
                 pass
         if body == "":
-            return []     # fascia oraria senza treni: risposta legittima, non un errore
-    print(f"    ! {path[:60]} non risponde", file=sys.stderr)
+            return []      # fascia oraria senza treni: risposta legittima
+    print(f"    ! {path[:70]} non risponde", file=sys.stderr)
     return []
 
 
-def scan_day(day, stations):
-    """Orari di transito di ogni treno a ogni stazione, ora per ora.
+def hhmm(ms):
+    return datetime.fromtimestamp(ms / 1000).strftime("%H:%M") if ms else None
 
-    partenze da' l'ora di partenza, arrivi quella di arrivo: per le stazioni
-    intermedie servono entrambe, per i capolinea ne esiste una sola.
-    """
-    trains = {}
-    calls = 0
-    for code in stations:
+
+def pick_hubs(stations):
+    """Stazioni di raccolta, distribuite lungo la linea."""
+    if len(stations) <= HUBS:
+        return stations
+    step = (len(stations) - 1) / (HUBS - 1)
+    return [stations[round(i * step)] for i in range(HUBS)]
+
+
+def collect_trains(day, hubs):
+    """Elenca i treni della giornata interrogando i soli nodi di raccolta."""
+    found = {}
+    for hub in hubs:
+        before = len(found)
         for hour in range(24):
             t = day.replace(hour=hour, minute=0, second=0, microsecond=0)
             stamp = t.strftime("%a %b %d %Y %H:%M:%S GMT+0200").replace(" ", "%20")
-            for kind, field in (("partenze", "compOrarioPartenza"),
-                                ("arrivi", "compOrarioArrivo")):
-                calls += 1
-                for tr in get(f"/{kind}/{code}/{stamp}"):
-                    num = tr.get("numeroTreno")
-                    when = tr.get(field)
-                    if not num or not when:
-                        continue
-                    rec = trains.setdefault(num, {
-                        "n": num, "cat": tr.get("categoria", ""),
-                        "orig": tr.get("origine"), "dest": tr.get("destinazione"),
-                        "stops": {},
-                    })
-                    # arrivi non porta la destinazione, partenze non porta l'origine
-                    rec["orig"] = rec["orig"] or tr.get("origine")
-                    rec["dest"] = rec["dest"] or tr.get("destinazione")
-                    st = rec["stops"].setdefault(code, {"s": code, "a": None, "d": None})
-                    st["d" if kind == "partenze" else "a"] = when
-        print(f"  {stations[code]:18s} -> {len(trains)} treni noti "
-              f"({calls} chiamate)", file=sys.stderr)
-    return trains
+            for kind in ("partenze", "arrivi"):
+                for tr in get(f"/{kind}/{hub['code']}/{stamp}"):
+                    num, orig = tr.get("numeroTreno"), tr.get("codOrigine")
+                    dpt = tr.get("dataPartenzaTreno")
+                    if num and orig and dpt:
+                        found[num] = (orig, dpt, tr.get("categoria", ""))
+        print(f"  {hub['name']:32s} +{len(found)-before:3d} treni "
+              f"(totale {len(found)})", file=sys.stderr)
+    return found
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--day-offset", type=int, default=1,
-                    help="giorni nel futuro da scansionare (default: domani)")
+    ap.add_argument("--day-offset", type=int, default=0,
+                    help="0 = oggi (da eseguire di notte, e' il caso normale)")
+    ap.add_argument("--reset", action="store_true",
+                    help="riparte da zero invece di fondere con l'orario esistente")
     args = ap.parse_args()
 
-    stations = {s["code"]: s["name"]
-                for s in json.load(open("data/siderno.json"))["stations"]}
+    line = json.load(open(LINE))
+    stations = line["stations"]
+    codes = {s["code"] for s in stations}
+    hubs = pick_hubs(stations)
+
     day = datetime.now() + timedelta(days=args.day_offset)
     wd = day.weekday()
-    print(f"Scansione del {day:%d/%m/%Y} ({GIORNI[wd]})...", file=sys.stderr)
+    print(f"Scansione del {day:%d/%m/%Y} ({GIORNI[wd]}) su {len(hubs)} nodi "
+          f"di raccolta, {len(codes)} stazioni note", file=sys.stderr)
 
-    found = scan_day(day, stations)
-    print(f"\n{len(found)} treni distinti sulla tratta", file=sys.stderr)
+    found = collect_trains(day, hubs)
+    print(f"\n{len(found)} treni distinti, scarico le fermate...", file=sys.stderr)
 
     known = {}
-    if os.path.exists(OUT):
+    if os.path.exists(OUT) and not args.reset:
         known = {t["n"]: t for t in json.load(open(OUT)).get("trains", [])}
         print(f"  (parto da {len(known)} treni gia' noti)", file=sys.stderr)
 
     added = updated = skipped = 0
-    for num, rec in found.items():
-        stops = sorted(rec["stops"].values(), key=lambda x: x["d"] or x["a"] or "99:99")
-        if len(stops) < 2:
-            skipped += 1     # tocca una sola delle nostre stazioni: non interpolabile
+    for i, (num, (orig, dpt, cat)) in enumerate(sorted(found.items()), 1):
+        d = get(f"/andamentoTreno/{orig}/{num}/{dpt}")
+        if not d or not d.get("fermate"):
+            skipped += 1
             continue
-        rec["stops"] = stops
-        old_rec = known.get(num)
-        if old_rec:
-            days = old_rec.get("days", [])
-            if wd not in days:
-                days.append(wd)
-                days.sort()
-            rec["days"] = days
+        stops = [{"s": f["id"],
+                  "a": hhmm(f.get("arrivo_teorico")),
+                  "d": hhmm(f.get("partenza_teorica"))}
+                 for f in d["fermate"] if f.get("id") in codes]
+        if len(stops) < 2:
+            skipped += 1      # tocca al massimo una stazione nostra
+            continue
+
+        rec = known.get(num, {})
+        days = rec.get("days", [])
+        if wd not in days:
+            days.append(wd)
+            days.sort()
+        known[num] = {"n": num, "cat": cat or d.get("categoria", ""),
+                      "orig": d.get("origine"), "dest": d.get("destinazione"),
+                      "days": days, "stops": stops}
+        if rec:
             updated += 1
         else:
-            rec["days"] = [wd]
             added += 1
-        known[num] = rec
+        if i % 10 == 0 or i == len(found):
+            print(f"  [{i}/{len(found)}] ...", file=sys.stderr)
 
     trains = sorted(known.values(),
                     key=lambda t: (t["stops"][0]["d"] or t["stops"][0]["a"] or "99:99"))
-    payload = {
+    json.dump({
         "generated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
         "last_scan_day": day.strftime("%Y-%m-%d"),
+        "stations": len(codes),
         "note": ("Orari teorici di riferimento, accumulati su piu' giorni. "
                  "I ritardi reali arrivano da ViaggiaTreno quando un proxy risponde."),
         "trains": trains,
-    }
-    with open(OUT, "w") as f:
-        json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+    }, open(OUT, "w"), ensure_ascii=False, separators=(",", ":"))
 
     cov = {g: sum(1 for t in trains if i in t["days"]) for i, g in enumerate(GIORNI)}
-    print(f"\n{OUT}: {len(trains)} treni totali "
-          f"(+{added} nuovi, {updated} aggiornati, {skipped} fuori tratta), "
+    fermate = sum(len(t["stops"]) for t in trains) / max(len(trains), 1)
+    print(f"\n{OUT}: {len(trains)} treni (+{added} nuovi, {updated} aggiornati, "
+          f"{skipped} fuori tratta), {fermate:.1f} fermate medie, "
           f"{os.path.getsize(OUT)/1024:.0f} KB", file=sys.stderr)
     print(f"copertura per giorno: {cov}", file=sys.stderr)
 

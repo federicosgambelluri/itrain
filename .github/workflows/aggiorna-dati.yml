@@ -4,19 +4,25 @@ name: Aggiorna i dati
 # quando i proxy pubblici non rispondono: se invecchia, l'app resta senza
 # nulla su cui ripiegare. Si aggiorna quindi ogni notte da solo.
 #
-# Ogni esecuzione scansiona il giorno successivo e fonde i treni trovati con
-# quelli gia' noti, annotando in quali giorni della settimana circolano: nel
-# giro di una settimana la distinzione feriale/festivo si completa da sola.
+# L'orario notturno non e' una comodita' ma un vincolo: andamentoTreno, che e'
+# cio' che da' tutte le fermate di un treno in una chiamata sola, risponde solo
+# per i treni con data di partenza odierna. Eseguito a giornata gia' iniziata
+# perderebbe tutti i treni gia' passati.
+#
+# Ogni esecuzione scansiona la giornata e fonde i treni trovati con quelli gia'
+# noti, annotando in quali giorni della settimana circolano: nel giro di una
+# settimana la distinzione feriale/festivo si completa da sola.
 
 on:
   schedule:
-    - cron: "20 2 * * *"     # 02:20 UTC, cioe' le 4:20 in Italia d'estate
+    - cron: "30 1 * * *"     # 01:30 UTC, cioe' le 3:30 in Italia d'estate
   workflow_dispatch:          # avviabile a mano dalla scheda Actions
     inputs:
-      giorni:
-        description: "Quanti giorni futuri scansionare (1-7)"
+      reset:
+        description: "Ricostruire l'orario da zero invece di fonderlo"
+        type: boolean
         required: false
-        default: "1"
+        default: false
 
 permissions:
   contents: write
@@ -37,15 +43,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Scansiona l'orario
+      - name: Scansiona l'orario di oggi
         run: |
-          giorni="${{ github.event.inputs.giorni || '1' }}"
-          for d in $(seq 1 "$giorni"); do
-            echo "::group::Giorno +$d"
-            python3 tools/build_timetable.py --day-offset "$d" || \
-              echo "giorno +$d non riuscito, proseguo"
-            echo "::endgroup::"
-          done
+          extra=""
+          if [ "${{ github.event.inputs.reset }}" = "true" ]; then extra="--reset"; fi
+          python3 tools/build_timetable.py --day-offset 0 $extra
 
       - name: Controlla che il file sia sensato
         run: |
@@ -61,6 +63,13 @@ jobs:
           for t in d["trains"]:
               if len(t["stops"]) < 2:
                   sys.exit(f"treno {t['n']} con meno di due fermate")
+          # Con la tratta intera un treno tocca molte stazioni: se la media
+          # crolla vuol dire che andamentoTreno ha risposto a meta', e un
+          # orario mutilato e' peggio di uno vecchio.
+          media = sum(len(t["stops"]) for t in d["trains"]) / n
+          print(f"fermate medie per treno: {media:.1f}")
+          if media < 4:
+              sys.exit(f"solo {media:.1f} fermate medie: scansione incompleta")
           PY
 
       - name: Committa se qualcosa e' cambiato

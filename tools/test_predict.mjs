@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { scheduledTrains } from "../js/trains.js";
 import { closuresFor, stateAt, STATE } from "../js/predict.js";
 
-const geo = JSON.parse(readFileSync("data/siderno.json", "utf8"));
+const geo = JSON.parse(readFileSync("data/linea.json", "utf8"));
 const tt = JSON.parse(readFileSync("data/timetable.json", "utf8"));
 const chain = new Map(geo.stations.map((s) => [s.code, s.chainage]));
 
@@ -18,6 +18,7 @@ console.log(`${trains.length} treni per ${day.toLocaleDateString("it-IT",{weekda
 
 const hhmm = (t) => new Date(t).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
 const siderno = geo.crossings.filter((c) => c.between.includes("S11850"));
+console.log(`linea: ${geo.crossings.length} PL su ${geo.stations.length} stazioni\n`);
 
 for (const pl of siderno) {
   const w = closuresFor(pl, trains, chain, geo.model, null);
