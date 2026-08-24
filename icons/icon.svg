@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#111a30"/>
+      <stop offset="1" stop-color="#070b16"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#sky)"/>
+
+  <!-- binario -->
+  <g stroke="#334155" stroke-width="12" stroke-linecap="round">
+    <line x1="56" y1="372" x2="456" y2="372"/>
+  </g>
+  <g stroke="#334155" stroke-width="7" stroke-linecap="round">
+    <line x1="96"  y1="356" x2="96"  y2="388"/>
+    <line x1="176" y1="356" x2="176" y2="388"/>
+    <line x1="256" y1="356" x2="256" y2="388"/>
+    <line x1="336" y1="356" x2="336" y2="388"/>
+    <line x1="416" y1="356" x2="416" y2="388"/>
+  </g>
+
+  <!-- sbarra abbassata, a strisce -->
+  <g transform="rotate(-8 256 268)">
+    <rect x="86" y="248" width="340" height="40" rx="20" fill="#ef4444"/>
+    <g fill="#f8fafc">
+      <rect x="140" y="248" width="46" height="40"/>
+      <rect x="232" y="248" width="46" height="40"/>
+      <rect x="324" y="248" width="46" height="40"/>
+    </g>
+  </g>
+
+  <!-- palo e luci -->
+  <rect x="64" y="150" width="30" height="250" rx="15" fill="#475569"/>
+  <circle cx="79" cy="176" r="26" fill="#ef4444"/>
+  <circle cx="79" cy="176" r="10" fill="#fca5a5" opacity=".85"/>
+
+  <!-- treno in avvicinamento -->
+  <g transform="translate(300 128)">
+    <rect x="-92" y="-46" width="184" height="92" rx="30" fill="#38bdf8"/>
+    <rect x="-64" y="-26" width="52" height="34" rx="10" fill="#0a0e1a" opacity=".82"/>
+    <rect x="12"  y="-26" width="52" height="34" rx="10" fill="#0a0e1a" opacity=".82"/>
+    <circle cx="-44" cy="28" r="12" fill="#0a0e1a" opacity=".82"/>
+    <circle cx="44"  cy="28" r="12" fill="#0a0e1a" opacity=".82"/>
+  </g>
+</svg>

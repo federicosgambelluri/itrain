@@ -1,0 +1,76 @@
+name: Aggiorna i dati
+
+# L'orario dei treni cambia, e il file statico e' la rete di sicurezza usata
+# quando i proxy pubblici non rispondono: se invecchia, l'app resta senza
+# nulla su cui ripiegare. Si aggiorna quindi ogni notte da solo.
+#
+# Ogni esecuzione scansiona il giorno successivo e fonde i treni trovati con
+# quelli gia' noti, annotando in quali giorni della settimana circolano: nel
+# giro di una settimana la distinzione feriale/festivo si completa da sola.
+
+on:
+  schedule:
+    - cron: "20 2 * * *"     # 02:20 UTC, cioe' le 4:20 in Italia d'estate
+  workflow_dispatch:          # avviabile a mano dalla scheda Actions
+    inputs:
+      giorni:
+        description: "Quanti giorni futuri scansionare (1-7)"
+        required: false
+        default: "1"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aggiorna-dati       # niente esecuzioni sovrapposte: il file si fonde
+  cancel-in-progress: false
+
+jobs:
+  orario:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Scansiona l'orario
+        run: |
+          giorni="${{ github.event.inputs.giorni || '1' }}"
+          for d in $(seq 1 "$giorni"); do
+            echo "::group::Giorno +$d"
+            python3 tools/build_timetable.py --day-offset "$d" || \
+              echo "giorno +$d non riuscito, proseguo"
+            echo "::endgroup::"
+          done
+
+      - name: Controlla che il file sia sensato
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("data/timetable.json"))
+          n = len(d["trains"])
+          print(f"{n} treni nell'orario")
+          # Un file troncato o svuotato e' peggio di uno vecchio: meglio non
+          # committarlo affatto e lasciare in piedi quello precedente.
+          if n < 10:
+              sys.exit(f"solo {n} treni: sospetto, non committo")
+          for t in d["trains"]:
+              if len(t["stops"]) < 2:
+                  sys.exit(f"treno {t['n']} con meno di due fermate")
+          PY
+
+      - name: Committa se qualcosa e' cambiato
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/timetable.json; then
+            echo "nessuna variazione"
+            exit 0
+          fi
+          git add data/timetable.json
+          git commit -m "Aggiorna l'orario dei treni ($(date -u +%Y-%m-%d))"
+          git push

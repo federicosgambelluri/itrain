@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>iTrain · Passaggi a livello di Siderno</title>
+<meta name="description" content="Sapere se il passaggio a livello è aperto, chiuso o sta per chiudersi, prima di uscire di casa.">
+<meta name="theme-color" content="#0b1020">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  // Applicato prima del foglio di stile: senza questo, chi ha scelto il tema
+  // chiaro vedrebbe un lampo di scuro a ogni caricamento.
+  try {
+    const m = localStorage.getItem("itrain.theme");
+    if (m === "light" || m === "dark") document.documentElement.setAttribute("data-theme", m);
+  } catch (e) {}
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Sfondo animato. Disegnato interamente con CSS: nessun file da scaricare,
+     funziona offline e si spegne da solo con prefers-reduced-motion. -->
+<div class="backdrop" aria-hidden="true">
+  <span class="glow glow-a"></span>
+  <span class="glow glow-b"></span>
+  <span class="rails"></span>
+</div>
+
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="7" y="4" width="18" height="18" rx="5"/>
+      <circle cx="12" cy="17" r="2"/><circle cx="20" cy="17" r="2"/>
+      <path d="M11 9h10"/>
+      <path d="M9 26l-2 3M23 26l2 3"/>
+    </svg>
+    <span class="brand-name">iTrain</span>
+    <span class="brand-place">Siderno</span>
+  </div>
+  <div class="topbar-actions">
+    <span class="source" id="source" title="Origine dei dati">
+      <span class="source-dot" id="sourceDot"></span>
+      <span id="sourceText">avvio…</span>
+    </span>
+    <button class="icon-btn" id="theme" title="Cambia tema" aria-label="Cambia tema">
+      <svg class="ico-auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8.5 21h7M12 17v4"/></svg>
+      <svg class="ico-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+      <svg class="ico-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 019.5 3.5a8.5 8.5 0 1011 11z"/></svg>
+    </button>
+    <button class="icon-btn" id="refresh" title="Aggiorna adesso" aria-label="Aggiorna adesso">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="banner" id="banner" hidden></div>
+
+<main class="layout">
+
+  <!-- Passaggio a livello più vicino -->
+  <section class="hero card" id="hero" aria-live="polite">
+    <div class="hero-loading">
+      <div class="spinner"></div>
+      <p>Cerco il passaggio a livello più vicino…</p>
+    </div>
+  </section>
+
+  <!-- Schema della linea -->
+  <section class="card panel" id="stripPanel" hidden>
+    <div class="panel-head">
+      <h2>La linea in questo momento</h2>
+      <span class="panel-note" id="stripNote"></span>
+    </div>
+    <div class="strip-scroll">
+      <svg id="strip" class="strip" role="img" aria-label="Schema della ferrovia Jonica con i passaggi a livello"></svg>
+    </div>
+  </section>
+
+  <!-- Prossime chiusure -->
+  <section class="card panel" id="timelinePanel" hidden>
+    <div class="panel-head">
+      <h2>Prossime tre ore</h2>
+      <span class="panel-note" id="timelineNote"></span>
+    </div>
+    <div id="timeline" class="timeline"></div>
+    <ol class="closures" id="closures"></ol>
+  </section>
+
+  <!-- Elenco per distanza -->
+  <section class="card panel" id="listPanel" hidden>
+    <div class="panel-head">
+      <h2>Tutti i passaggi a livello</h2>
+      <span class="panel-note">in ordine di distanza</span>
+    </div>
+    <ul class="crossing-list" id="list"></ul>
+  </section>
+
+  <!-- Trasparenza sul metodo -->
+  <section class="card panel about" id="about">
+    <div class="panel-head"><h2>Come fa a saperlo</h2></div>
+    <div class="about-body">
+      <p><strong>Questa è una previsione, non una misura.</strong> RFI non pubblica
+      lo stato delle barriere: nessuna API dice se un passaggio a livello è aperto
+      o chiuso in questo istante. Chi sostiene il contrario sta inventando.</p>
+
+      <p>Quello che si sa davvero è <em>quando i treni passano dalle stazioni</em>,
+      orario previsto e ritardo reale, da ViaggiaTreno. Da lì l'app ricava il resto
+      in tre passi:</p>
+
+      <ol class="steps">
+        <li><strong>Dove sta il passaggio a livello</strong> lungo il binario, misurato
+        una volta per tutte su OpenStreetMap: Via Genova è a 196 metri dalla stazione
+        di Siderno, Via Jonio a 1191.</li>
+        <li><strong>Quando il treno ci passa sopra</strong>, interpolando fra le due
+        stazioni che lo racchiudono. Non in modo lineare: un treno riparte da fermo e
+        frena fino a fermarsi, quindi vicino alla stazione è molto più lento della sua
+        media. Ignorare questo sposterebbe la previsione di una ventina di secondi.</li>
+        <li><strong>Quando scendono le barriere</strong>: circa 2 minuti e mezzo prima
+        del transito, valore dichiarato da RFI. È il numero meno solido dei tre, perché
+        dipende da dove si trova il circuito di binario che comanda la chiusura, e
+        cambia da impianto a impianto.</li>
+      </ol>
+
+      <p>Per questo ci sono i due tasti <em>«si è chiuso ora»</em> e <em>«si è riaperto
+      ora»</em>. Ogni volta che li premi mentre sei fermo davanti alle sbarre, l'app
+      misura il preavviso reale di <em>quel</em> passaggio a livello e sostituisce il
+      valore di targa. Dopo due o tre osservazioni la previsione smette di essere
+      generica e diventa quella del tuo passaggio a livello.</p>
+
+      <p class="fineprint">Le osservazioni restano sul tuo telefono, in questo browser:
+      non c'è nessun database e niente viene inviato da nessuna parte. Puoi esportarle
+      dal fondo di questa pagina.</p>
+
+      <div class="about-actions">
+        <button class="btn ghost" id="exportCalib">Esporta calibrazione</button>
+        <button class="btn ghost" id="importCalib">Importa</button>
+        <button class="btn ghost danger" id="resetCalib">Azzera</button>
+      </div>
+      <p class="fineprint" id="calibSummary"></p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>Dati dei treni: ViaggiaTreno (RFI) · Posizione dei passaggi a livello:
+  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, ODbL.</p>
+  <p class="fineprint">Progetto indipendente, non affiliato a RFI o Trenitalia.
+  <strong>Alle sbarre guarda le sbarre, non il telefono.</strong></p>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
