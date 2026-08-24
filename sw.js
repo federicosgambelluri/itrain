@@ -6,7 +6,7 @@
  * cache: un ritardo di dieci minuti fa non serve a nessuno.
  */
 
-const VERSION = "itrain-v1";
+const VERSION = "itrain-v2";   // cambiata dopo l'estensione alla linea intera
 const SHELL = [
   "./",
   "index.html",
