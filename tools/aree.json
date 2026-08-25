@@ -195,5 +195,53 @@
     "osm_area": "Trapani",
     "admin_level": "6",
     "hubs": 8
+  },
+  {
+    "slug": "campobasso",
+    "name": "Campobasso e provincia",
+    "region": "Molise",
+    "osm_area": "Campobasso",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "isernia",
+    "name": "Isernia e provincia",
+    "region": "Molise",
+    "osm_area": "Isernia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "genova",
+    "name": "Genova e provincia",
+    "region": "Liguria",
+    "osm_area": "Genova",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "savona",
+    "name": "Savona e provincia",
+    "region": "Liguria",
+    "osm_area": "Savona",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "imperia",
+    "name": "Imperia e provincia",
+    "region": "Liguria",
+    "osm_area": "Provincia di Imperia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "la-spezia",
+    "name": "La Spezia e provincia",
+    "region": "Liguria",
+    "osm_area": "La Spezia",
+    "admin_level": "6",
+    "hubs": 8
   }
 ]

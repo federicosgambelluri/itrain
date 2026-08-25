@@ -42,6 +42,8 @@ const state = {
   message: null,
   loadingArea: false,
   mapFitted: false,
+  showAll: false,
+  allPoints: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -148,7 +150,7 @@ function areaCentre(meta) {
   return { lat: (s + n) / 2, lon: (w + e) / 2 };
 }
 
-async function loadArea(slug, { remember = true } = {}) {
+async function loadArea(slug, { remember = true, select = null } = {}) {
   const meta = state.index.areas.find((a) => a.slug === slug);
   if (!meta) return;
 
@@ -161,7 +163,7 @@ async function loadArea(slug, { remember = true } = {}) {
     state.area = area;
     state.segments = area.segments;
     state.hubs = pickHubs(area, 2);
-    state.selectedId = null;
+    state.selectedId = select;
     state.listLimit = 8;
     state.message = null;
     if (remember) {
@@ -169,8 +171,12 @@ async function loadArea(slug, { remember = true } = {}) {
     }
     if (state.usingFallback) state.position = areaCentre(meta);
     gmap.clear();
-    state.mapFitted = false;
+    state.mapFitted = !select;   // scegliendo un PL preciso si va li', non sul riquadro
     recompute();
+    if (select) {
+      const c = state.crossings.find((k) => k.id === select);
+      if (c) gmap.focusOn(c.lat, c.lon, 15);
+    }
   } catch {
     fatal(`Non riesco a caricare i dati di ${meta.name}.`);
     return;
@@ -178,6 +184,7 @@ async function loadArea(slug, { remember = true } = {}) {
     state.loadingArea = false;
   }
 
+  applyOthers();
   render();
   refresh();
 }
@@ -607,6 +614,59 @@ function selectCrossing(id, { scroll = false, focus = false } = {}) {
   if (scroll) $("hero").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/**
+ * Accende la vista d'insieme: tutti i passaggi a livello di tutte le zone.
+ *
+ * L'indice si scarica una volta sola e pesa una settantina di chilobyte,
+ * perche' contiene solo dove sono e come si chiamano. Lo stato no: quello
+ * richiederebbe l'orario dei treni di ogni zona, quasi un megabyte, e questa
+ * e' un'app che si apre in strada.
+ */
+async function toggleAllAreas() {
+  const btn = $("allAreas");
+  if (state.showAll) {
+    state.showAll = false;
+    gmap.clearOthers();
+    btn.classList.remove("on");
+    btn.setAttribute("aria-pressed", "false");
+    $("allAreasLabel").textContent = "mostra tutte le zone";
+    $("othersLegend").hidden = true;
+    renderMap();
+    return;
+  }
+
+  if (!state.allPoints) {
+    $("allAreasLabel").textContent = "carico…";
+    try {
+      const d = await fetch("data/mappa.json").then((r) => r.json());
+      state.allPoints = d.punti;
+    } catch {
+      $("allAreasLabel").textContent = "mostra tutte le zone";
+      flash("Non riesco a caricare la mappa d'insieme.", "bad");
+      return;
+    }
+  }
+
+  state.showAll = true;
+  btn.classList.add("on");
+  btn.setAttribute("aria-pressed", "true");
+  $("allAreasLabel").textContent = "mostra solo questa zona";
+  $("othersLegend").hidden = false;
+  gmap.fitBbox([35.4, 6.5, 47.2, 18.6], { animate: false });  // l'Italia intera
+  applyOthers();
+  renderMap();
+}
+
+/** I punti delle altre zone: quelli della zona caricata li disegna gia' lo stato. */
+function applyOthers() {
+  if (!state.showAll || !state.allPoints) return;
+  const mine = state.area?.slug;
+  gmap.setOthers(
+    state.allPoints.filter((p) => p[3] !== mine),
+    (zona, id) => loadArea(zona, { select: id }),
+  );
+}
+
 function renderMap() {
   if (!gmap.isReady() || !state.area) return;
   const now = Date.now();
@@ -622,8 +682,10 @@ function renderMap() {
   const moving = state.trains.filter(
     (t) => trainPosition(t, state.segments, now, state.area.model)).length;
   const senza = state.crossings.filter((c) => c.covered === false).length;
-  $("mapNote").textContent =
-    `${state.area.crossings.length} passaggi a livello` +
+  $("mapNote").textContent = state.showAll
+    ? `${state.allPoints.length} passaggi a livello in ${state.index.areas.length} zone · ` +
+      "tocca un puntino grigio per aprirne la zona"
+    : `${state.area.crossings.length} passaggi a livello` +
     (senza ? `, ${senza} senza dati treno` : "") + " · " +
     (moving ? `${moving} ${moving === 1 ? "treno in corsa" : "treni in corsa"}`
             : "nessun treno in corsa");
@@ -824,6 +886,8 @@ function wireControls() {
     $("theme").title = theme.LABELS[mode];
     $("theme").setAttribute("aria-label", theme.LABELS[mode]);
   };
+
+  $("allAreas").onclick = () => toggleAllAreas();
 
   $("areaBtn").onclick = () => {
     $("pickerSearch").value = "";

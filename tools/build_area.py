@@ -29,6 +29,7 @@ from rete import (Graph, overpass, vt, haversine, resolve_code, dedupe_by_code)
 AREE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aree.json")
 OUTDIR = "data/aree"
 INDEX = "data/aree.json"
+MAPPA = "data/mappa.json"
 CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache")
 GIORNI = ["lun", "mar", "mer", "gio", "ven", "sab", "dom"]
 
@@ -625,6 +626,33 @@ def scan_with_coverage(day, stations, graph, n_hubs, codes):
     return trains + added
 
 
+def update_map():
+    """Scrive data/mappa.json: tutti i passaggi a livello, senza gli orari.
+
+    Serve alla vista d'insieme sulla mappa. Contiene solo posizione, nome e
+    zona di appartenenza: sapere lo *stato* di un passaggio a livello richiede
+    l'orario dei treni della sua zona, e caricarle tutte insieme vorrebbe dire
+    scaricare quasi un megabyte a un'app che si usa in giro, con la rete
+    mobile. Cosi' invece si vede dove sono tutti, e la zona si scarica solo
+    quando se ne tocca uno.
+    """
+    punti = []
+    for fn in sorted(os.listdir(OUTDIR)):
+        if not fn.endswith(".json"):
+            continue
+        d = json.load(open(f"{OUTDIR}/{fn}"))
+        for c in d["crossings"]:
+            punti.append([round(c["lat"], 5), round(c["lon"], 5),
+                          c["name"], d["slug"], c["id"], 1 if c["covered"] else 0])
+    punti.sort(key=lambda p: (p[0], p[1]))
+    json.dump({"generated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+               "campi": ["lat", "lon", "nome", "zona", "id", "coperto"],
+               "punti": punti},
+              open(MAPPA, "w"), ensure_ascii=False, separators=(",", ":"))
+    print(f"{MAPPA}: {len(punti)} passaggi a livello, "
+          f"{os.path.getsize(MAPPA)/1024:.0f} KB", file=sys.stderr)
+
+
 def update_index():
     """Riscrive l'elenco delle aree disponibili leggendo i file generati."""
     definizioni = {a["slug"]: a for a in json.load(open(AREE))}
@@ -649,6 +677,7 @@ def update_index():
                "areas": areas}, open(INDEX, "w"),
               ensure_ascii=False, separators=(",", ":"))
     print(f"{INDEX}: {len(areas)} aree", file=sys.stderr)
+    update_map()
 
 
 if __name__ == "__main__":

@@ -82,12 +82,17 @@
       <h2>Dove sono</h2>
       <span class="panel-note" id="mapNote"></span>
     </div>
+    <button class="btn ghost wide" id="allAreas" aria-pressed="false">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>
+      <span id="allAreasLabel">mostra tutte le zone</span>
+    </button>
     <div id="map" class="map"></div>
     <p class="map-legend">
       <span><i class="dot open"></i> aperto</span>
       <span><i class="dot closing"></i> sta per chiudersi</span>
       <span><i class="dot closed"></i> chiuso</span>
       <span><i class="dot nodata"></i> dati non disponibili</span>
+      <span id="othersLegend" hidden><i class="dot other"></i> altre zone</span>
       <span class="map-hint">tocca un cerchio per sceglierlo</span>
     </p>
   </section>
