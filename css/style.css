@@ -79,6 +79,10 @@
 
 * { box-sizing: border-box; }
 
+/* L'attributo hidden deve vincere su display: flex e simili, altrimenti gli
+   elementi nascosti restano visibili. */
+[hidden] { display: none !important; }
+
 /* ------------------------- sfondo animato ------------------------- *
  * Due aloni che vagano lentamente e una massicciata che scorre.
  * Tutto in CSS: nessun video da scaricare, nessuna dipendenza esterna,
@@ -486,6 +490,26 @@ a { color: var(--accent); }
 .btn.danger { color: var(--closed); border-color: color-mix(in srgb, var(--closed) 40%, transparent); }
 .btn.mark-closed { border-color: color-mix(in srgb, var(--closed) 40%, transparent); }
 .btn.mark-open { border-color: color-mix(in srgb, var(--open) 40%, transparent); }
+
+.confirm {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px;
+}
+.confirm-q {
+  font-size: .86rem; color: var(--muted); font-weight: 600;
+  flex: 0 0 auto; margin-right: 2px;
+}
+.confirm .btn { flex: 1 1 110px; }
+
+.refine {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  font-size: .86rem; color: var(--muted);
+}
+.refine .btn { flex: 0 0 auto; min-height: 38px; padding: 8px 14px; }
 
 .action-note {
   margin-top: 10px; font-size: .76rem; color: var(--faint); line-height: 1.5;

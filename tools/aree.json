@@ -229,14 +229,6 @@
     "hubs": 8
   },
   {
-    "slug": "imperia",
-    "name": "Imperia e provincia",
-    "region": "Liguria",
-    "osm_area": "Provincia di Imperia",
-    "admin_level": "6",
-    "hubs": 8
-  },
-  {
     "slug": "la-spezia",
     "name": "La Spezia e provincia",
     "region": "Liguria",

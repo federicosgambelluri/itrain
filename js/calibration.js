@@ -130,17 +130,131 @@ export function undo(crossingId, kind) {
 }
 
 export function reset(crossingId) {
+  resetStates(crossingId);
   const all = readAll();
   if (crossingId) delete all[crossingId];
   else return writeAll({});
   return writeAll(all);
 }
 
+/* ------------------------------------------------------------------ *
+ * Conferme di stato
+ * ------------------------------------------------------------------ *
+ *
+ * Diverse dalle osservazioni di transizione qui sopra, e utili per un'altra
+ * ragione. Segnare l'istante in cui le sbarre scendono misura il preavviso,
+ * ma richiede di trovarsi li' nel momento esatto. Dire "adesso e' chiuso"
+ * invece si puo' sempre: basta guardare.
+ *
+ * Non alimentano il modello, e non e' una dimenticanza. Una conferma dice
+ * che a un certo istante la sbarra era giu', non quando e' scesa: e' un
+ * limite, non una misura, e mescolarlo alle misure vere sposterebbe la
+ * mediana in modo scorretto. Servono invece a dire quanto la previsione ci
+ * azzecca, e a segnalare uno scarto sistematico quando c'e'.
+ */
+
+const STATE_KEY = "itrain.confirmations";
+
+/** Oltre questo numero le piu' vecchie si scartano. */
+const MAX_CONFIRMATIONS = 40;
+
+/** Sotto questo numero di conferme non si parla di scarto sistematico. */
+const MIN_FOR_BIAS = 3;
+
+function readStates() {
+  try {
+    return JSON.parse(localStorage.getItem(STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+/** L'app, in questo istante, sta dicendo che e' chiuso? */
+function saysClosed(predicted) {
+  return predicted === "closed";
+}
+
+/**
+ * Registra una conferma di stato.
+ *
+ * @param {string} crossingId
+ * @param {"closed"|"open"} actual  quello che l'utente vede
+ * @param {string} predicted        lo stato che l'app stava mostrando
+ */
+export function recordState(crossingId, actual, predicted, at = Date.now()) {
+  const all = readStates();
+  const list = all[crossingId] ?? [];
+  list.push({ t: at, a: actual, p: predicted });
+  all[crossingId] = list.slice(-MAX_CONFIRMATIONS);
+  try {
+    localStorage.setItem(STATE_KEY, JSON.stringify(all));
+  } catch {
+    return { ok: false, reason: "memoria del browser non disponibile" };
+  }
+  return { ok: true, ...accuracy(crossingId), agreed: saysClosed(predicted) === (actual === "closed") };
+}
+
+/**
+ * Quanto la previsione ci azzecca su questo passaggio a livello.
+ *
+ * `chiusoInAnticipo` conta le volte in cui era gia' chiuso mentre l'app lo
+ * dava aperto: se capita spesso, il preavviso reale e' piu' lungo di quello
+ * che stiamo usando. `apertoInRitardo` e' il caso opposto.
+ */
+export function accuracy(crossingId) {
+  const list = readStates()[crossingId] ?? [];
+  let hits = 0;
+  let chiusoInAnticipo = 0;
+  let apertoInRitardo = 0;
+  for (const r of list) {
+    const detto = saysClosed(r.p);
+    const visto = r.a === "closed";
+    if (detto === visto) hits++;
+    else if (visto) chiusoInAnticipo++;
+    else apertoInRitardo++;
+  }
+  const n = list.length;
+  const bias = n >= MIN_FOR_BIAS && chiusoInAnticipo >= Math.max(2, n * 0.6)
+    ? "anticipo"
+    : n >= MIN_FOR_BIAS && apertoInRitardo >= Math.max(2, n * 0.6)
+      ? "ritardo"
+      : null;
+  return { n, hits, chiusoInAnticipo, apertoInRitardo, bias };
+}
+
+/** Annulla l'ultima conferma: serve subito dopo un tocco per sbaglio. */
+export function undoState(crossingId) {
+  const all = readStates();
+  if (!all[crossingId]?.length) return false;
+  all[crossingId].pop();
+  try {
+    localStorage.setItem(STATE_KEY, JSON.stringify(all));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function resetStates(crossingId) {
+  const all = readStates();
+  if (crossingId) delete all[crossingId];
+  try {
+    localStorage.setItem(STATE_KEY, crossingId ? JSON.stringify(all) : "{}");
+  } catch { /* ignorato */ }
+}
+
+export function exportStates() {
+  return readStates();
+}
+
 /** Tutte le osservazioni, per condividerle o metterle nel repo. */
 export function exportAll() {
-  return JSON.stringify(
-    { exported: new Date().toISOString(), version: 1, calibration: readAll() },
-    null, 2);
+  return JSON.stringify({
+    exported: new Date().toISOString(),
+    version: 2,
+    calibration: readAll(),      // transizioni: misurano il preavviso
+    confirmations: readStates(), // conferme di stato: misurano la precisione
+  }, null, 2);
 }
 
 export function importAll(json) {
@@ -148,8 +262,16 @@ export function importAll(json) {
     const parsed = JSON.parse(json);
     const data = parsed.calibration ?? parsed;
     if (typeof data !== "object" || Array.isArray(data)) throw new Error("formato non valido");
-    return writeAll({ ...readAll(), ...data });
+    const ok = writeAll({ ...readAll(), ...data });
+    if (parsed.confirmations && typeof parsed.confirmations === "object") {
+      try {
+        localStorage.setItem(STATE_KEY,
+          JSON.stringify({ ...readStates(), ...parsed.confirmations }));
+      } catch { /* ignorato */ }
+    }
+    return ok;
   } catch {
     return false;
   }
 }
+

@@ -30,6 +30,11 @@ amministrativo.
 | Ravenna e provincia | Emilia-Romagna | **89 su 114** con previsione | 106 | 66 KB |
 | Reggio Emilia e provincia | Emilia-Romagna | **46 su 93** con previsione | 69 | 39 KB |
 | Rimini e provincia | Emilia-Romagna | **8 su 9** con previsione | 38 | 17 KB |
+| Genova e provincia | Liguria | tutti e 9 | 170 | 117 KB |
+| La Spezia e provincia | Liguria | **0 su 1** con previsione | 0 | 1 KB |
+| Savona e provincia | Liguria | tutti e 30 | 108 | 53 KB |
+| Campobasso e provincia | Molise | **2 su 59** con previsione | 8 | 10 KB |
+| Isernia e provincia | Molise | **15 su 24** con previsione | 24 | 10 KB |
 | Agrigento e provincia | Sicilia | **17 su 49** con previsione | 6 | 9 KB |
 | Caltanissetta e provincia | Sicilia | **11 su 24** con previsione | 33 | 13 KB |
 | Catania e provincia | Sicilia | **32 su 36** con previsione | 95 | 42 KB |
@@ -40,7 +45,7 @@ amministrativo.
 | Siracusa e provincia | Sicilia | **47 su 50** con previsione | 52 | 24 KB |
 | Trapani e provincia | Sicilia | tutti e 102 | 29 | 35 KB |
 
-In totale **746 passaggi a livello con previsione** su 988 censiti, in 24 zone.
+In totale **802 passaggi a livello con previsione** su 1111 censiti, in 29 zone.
 <!-- zone:fine -->
 
 I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
@@ -100,11 +105,25 @@ dell'ammodernamento superava i 4 minuti). È il numero meno solido dei tre,
 perché dipende da dove si trova il circuito di binario che comanda la chiusura,
 e cambia da impianto a impianto.
 
-**Per questo l'app si calibra sul campo.** I tasti *«si è chiuso ora»* e *«si è
-riaperto ora»* misurano il preavviso reale di *quel* passaggio a livello e
-sostituiscono il valore di targa. Dopo due o tre osservazioni la previsione
-smette di essere generica. Le osservazioni restano in `localStorage`: niente
-database, niente dati che lasciano il telefono, esportabili in JSON.
+**Per questo l'app si calibra sul campo**, raccogliendo due cose diverse.
+
+*«Com'è adesso? chiuso / aperto»* è la domanda facile: basta guardare le
+sbarre. Dice se la previsione ci ha azzeccato, e l'app risponde con il conteggio
+(«ha indovinato 7 volte su 9»). Se lo scarto è sistematico — spesso già chiuso
+mentre l'app lo dà aperto — lo segnala.
+
+Se poi il cambio è appena avvenuto, un secondo tocco su *«sì, proprio adesso»*
+registra **l'istante della transizione**, che è tutt'altro dato: misura il
+preavviso reale di quel passaggio a livello e sostituisce il valore di targa.
+Dopo due o tre osservazioni la previsione smette di essere generica.
+
+La distinzione conta. Una conferma di stato dice che *a un certo istante* la
+sbarra era giù, non *quando* è scesa: è un limite, non una misura, e mescolarla
+alle misure vere sposterebbe la mediana in modo scorretto. Per questo alimenta
+il conteggio della precisione e non il modello.
+
+Tutto resta in `localStorage`: niente database, niente dati che lasciano il
+telefono, esportabili in JSON.
 
 Le finestre che si sovrappongono vengono fuse: sulle linee a binario unico i
 treni si incrociano in stazione e capita di vederne due fermi insieme per
@@ -213,6 +232,14 @@ schermata Home (Condividi → «Aggiungi a Home»). È una regola di Safari.
 ---
 
 ## La mappa
+
+Un interruttore accende la **vista d'insieme**: tutti i passaggi a livello di
+tutte le zone. L'indice pesa una settantina di chilobyte e si scarica solo
+quando serve, perché contiene unicamente dove sono e come si chiamano. Lo stato
+no: saperlo richiede l'orario dei treni della zona, e caricarle tutte insieme
+vorrebbe dire quasi un megabyte per un'app che si apre in strada. I punti delle
+altre zone restano quindi grigi, e toccandone uno si scarica la sua zona e lo si
+apre già scelto — meglio un puntino grigio onesto che un colore inventato.
 
 Leaflet è **incluso nel repository** (`vendor/leaflet/`, licenza BSD-2) invece
 di essere preso da un CDN: l'app non dipende da un servizio esterno per

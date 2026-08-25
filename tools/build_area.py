@@ -343,8 +343,14 @@ def main():
         print("  Overpass non risponde: uso la copia locale dei nodi", file=sys.stderr)
         nodes = json.load(open(path))
     raw_x = [n for n in nodes if n["tags"].get("railway") == "level_crossing"]
-    raw_s = [n for n in nodes if n["tags"].get("railway") in ("station", "halt")
-             and n["tags"].get("name")]
+    # Le stazioni della metropolitana sono taggate railway=station come le
+    # altre, ma non hanno nulla a che vedere con i passaggi a livello: a Genova
+    # facevano entrare fermate della metro nell'elenco delle stazioni.
+    raw_s = [n for n in nodes
+             if n["tags"].get("railway") in ("station", "halt")
+             and n["tags"].get("name")
+             and n["tags"].get("station") not in ("subway", "light_rail")
+             and n["tags"].get("subway") != "yes"]
     print(f"  {len(raw_x)} nodi PL, {len(raw_s)} stazioni", file=sys.stderr)
 
     running = running_line_nodes(ways)
@@ -484,6 +490,18 @@ def main():
         "trains": trains,
         "model": MODEL,
     }
+    # Una zona senza passaggi a livello non ha ragione di esistere nel
+    # selettore: in Liguria succede davvero, perche' la ferrovia corre quasi
+    # tutta in galleria e a Imperia di attraversamenti a raso non ce n'e' uno.
+    if not xings:
+        print(f"\nNessun passaggio a livello in {area['name']}: zona non pubblicata",
+              file=sys.stderr)
+        stale = f"{OUTDIR}/{area['slug']}.json"
+        if os.path.exists(stale):
+            os.remove(stale)
+        update_index()
+        return
+
     os.makedirs(OUTDIR, exist_ok=True)
     out = f"{OUTDIR}/{area['slug']}.json"
     json.dump(payload, open(out, "w"), ensure_ascii=False, separators=(",", ":"))

@@ -43,6 +43,7 @@ const state = {
   loadingArea: false,
   mapFitted: false,
   showAll: false,
+  refine: null,
   allPoints: null,
 };
 
@@ -465,12 +466,23 @@ function renderHero() {
   const notifyLabel = perm === "granted" && watching
     ? `avvisi attivi${state.notifyArmed ? ` (${state.notifyArmed})` : ""}` : "avvisami";
 
+  const acc = calib.accuracy(`${state.area.slug}:${c.id}`);
+  const accNote = acc.n
+    ? ` La previsione ha indovinato ${acc.hits} volte su ${acc.n}.` +
+      (acc.bias === "anticipo"
+        ? " Qui le sbarre sembrano scendere prima di quanto calcolo."
+        : acc.bias === "ritardo"
+          ? " Qui le sbarre sembrano risalire prima di quanto calcolo."
+          : "")
+    : "";
+
   const cal = c.calibration;
   const calNote = cal.active
     ? `Calibrato su questo passaggio a livello: chiude ${Math.round(cal.leadClose ?? state.area.model.lead_close_s)} secondi prima del transito` +
       (cal.leadOpen != null ? `, riapre ${Math.round(cal.leadOpen)} secondi dopo` : "") + "."
     : `Sto usando il valore generico di ${state.area.model.lead_close_s} secondi. ` +
       `Servono ancora ${cal.missing} osservazioni perché diventi quello reale di questo passaggio a livello.`;
+  const nota = calNote + accNote;
 
   const st = nearestStation(c);
   hero.innerHTML = `
@@ -519,22 +531,36 @@ function renderHero() {
         <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
         ${notifyLabel}
       </button>
-      <button class="btn mark-closed" id="markClosed">
+    </div>
+
+    <div class="confirm">
+      <span class="confirm-q">Com'è adesso?</span>
+      <button class="btn mark-closed" id="isClosed">
         <svg viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="4" rx="1.2"/></svg>
-        si è chiuso ora
+        chiuso
       </button>
-      <button class="btn mark-open" id="markOpen">
+      <button class="btn mark-open" id="isOpen">
         <svg viewBox="0 0 24 24"><path d="M5 12l4.5 4.5L19 7"/></svg>
-        si è riaperto ora
+        aperto
       </button>
+    </div>
+
+    <div class="refine" id="refine" hidden>
+      <span id="refineText"></span>
+      <button class="btn ghost" id="refineYes">sì, proprio adesso</button>
     </div>`}
-    ${noData ? "" : `<p class="action-note ${state.message?.kind ?? ""}">${state.message?.text ?? calNote}</p>`}
+    ${noData ? "" : `<p class="action-note ${state.message?.kind ?? ""}">${state.message?.text ?? nota}</p>`}
   `;
 
   if (!noData) {
     $("notifyBtn").onclick = onNotifyClick;
-    $("markClosed").onclick = () => onMark("close");
-    $("markOpen").onclick = () => onMark("open");
+    $("isClosed").onclick = () => onConfirm("closed");
+    $("isOpen").onclick = () => onConfirm("open");
+    $("refineYes").onclick = () => {
+      onMark(state.refine === "closed" ? "close" : "open");
+      state.refine = null;
+    };
+    if (state.refine) showRefine(state.refine);
   }
 }
 
@@ -844,6 +870,48 @@ function rearmNotifications() {
     return;
   }
   state.notifyArmed = notify.schedule(c, c.windows);
+}
+
+/**
+ * Conferma dello stato attuale: piu' facile da dare della transizione, perche'
+ * basta guardare le sbarre. Non entra nel modello -- dice che a quest'ora era
+ * chiusa, non quando e' scesa -- ma dice quanto la previsione ci azzecca, e
+ * apre alla misura precisa per chi la sta guardando proprio adesso.
+ */
+function onConfirm(actual) {
+  const c = selected();
+  if (!c) return;
+  const key = `${state.area.slug}:${c.id}`;
+  const predicted = (c.now ?? stateAt(c.windows, Date.now())).state;
+
+  const res = calib.recordState(key, actual, predicted);
+  if (!res.ok) return flash(res.reason, "bad");
+
+  const parola = actual === "closed" ? "chiuso" : "aperto";
+  flash(res.agreed
+    ? `Confermato: ${parola}, come previsto. ${res.hits} volte su ${res.n}.`
+    : `Segnato: ${parola}, mentre io dicevo il contrario. ` +
+      `Ci ho preso ${res.hits} volte su ${res.n}.`,
+    res.agreed ? "ok" : "bad");
+
+  state.refine = actual;
+  render();
+}
+
+/** Chiede se il cambio e' appena avvenuto: e' quello che misura il preavviso. */
+function showRefine(actual) {
+  const box = $("refine");
+  if (!box) return;
+  box.hidden = false;
+  $("refineText").textContent = actual === "closed"
+    ? "Le sbarre sono appena scese?"
+    : "Si sono appena rialzate?";
+  clearTimeout(showRefine.timer);
+  showRefine.timer = setTimeout(() => {
+    state.refine = null;
+    const b = $("refine");
+    if (b) b.hidden = true;
+  }, 20000);
 }
 
 function onMark(kind) {

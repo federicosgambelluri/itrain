@@ -14,7 +14,7 @@ binario. Per ogni coppia di stazioni consecutive di un treno si calcola il
 percorso piu' breve sulle rotaie, e i passaggi a livello che ci stanno sopra
 sono quelli che quel treno chiudera'.
 """
-import heapq, json, math, subprocess, sys, time
+import heapq, json, math, subprocess, sys, time, urllib.parse
 
 # Piu' istanze Overpass: quella principale limita le richieste ravvicinate e
 # su una serie di zone si viene respinti. Ruotando fra i mirror una zona non
@@ -55,8 +55,13 @@ def _curl(args, tries, what, allow_empty=False):
                 return json.loads(last)
             except json.JSONDecodeError:
                 pass
-        if last == "" and allow_empty:
-            return None
+        if allow_empty:
+            # Una risposta vuota o una pagina d'errore significano "non
+            # trovato", che per una ricerca di stazione e' un esito legittimo:
+            # farne un'eccezione faceva morire l'intera zona per un solo nome
+            # strano.
+            if last == "" or last.lstrip().startswith("<"):
+                return None
     raise RuntimeError(f"{what} non risponde dopo {tries} tentativi: {last[:160]!r}")
 
 
@@ -287,7 +292,10 @@ def resolve_code(name, pt, cache):
     target = _normalise(name)
 
     for attempt in name_variants(name):
-        for cand in vt("/cercaStazione/" + attempt.replace(" ", "%20")):
+        # I nomi vanno codificati sul serio: "Sarzano/Sant'Agostino" contiene
+        # una barra, che spezzerebbe il percorso dell'URL e farebbe rispondere
+        # 404 al servizio.
+        for cand in vt("/cercaStazione/" + urllib.parse.quote(attempt, safe="")):
             code = cand.get("id")
             if not code:
                 continue
