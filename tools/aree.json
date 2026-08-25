@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "bologna",
+    "name": "Bologna e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Bologna",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "jonica",
+    "name": "Locride e Ferrovia Jonica",
+    "region": "Calabria",
+    "bbox": [37.90, 15.55, 38.95, 16.85],
+    "hubs": 5
+  }
+]

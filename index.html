@@ -20,6 +20,7 @@
     if (m === "light" || m === "dark") document.documentElement.setAttribute("data-theme", m);
   } catch (e) {}
 </script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -42,7 +43,10 @@
       <path d="M9 26l-2 3M23 26l2 3"/>
     </svg>
     <span class="brand-name">iTrain</span>
-    <span class="brand-place">Siderno</span>
+    <button class="brand-place" id="areaBtn" title="Cambia zona">
+      <span id="areaName">…</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
   </div>
   <div class="topbar-actions">
     <span class="source" id="source" title="Origine dei dati">
@@ -72,15 +76,20 @@
     </div>
   </section>
 
-  <!-- Schema della linea -->
-  <section class="card panel" id="stripPanel" hidden>
+  <!-- Mappa -->
+  <section class="card panel" id="mapPanel" hidden>
     <div class="panel-head">
-      <h2>La linea in questo momento</h2>
-      <span class="panel-note" id="stripNote"></span>
+      <h2>Dove sono</h2>
+      <span class="panel-note" id="mapNote"></span>
     </div>
-    <div class="strip-scroll">
-      <svg id="strip" class="strip" role="img" aria-label="Schema della ferrovia Jonica con i passaggi a livello"></svg>
-    </div>
+    <div id="map" class="map"></div>
+    <p class="map-legend">
+      <span><i class="dot open"></i> aperto</span>
+      <span><i class="dot closing"></i> sta per chiudersi</span>
+      <span><i class="dot closed"></i> chiuso</span>
+      <span><i class="dot nodata"></i> dati non disponibili</span>
+      <span class="map-hint">tocca un cerchio per sceglierlo</span>
+    </p>
   </section>
 
   <!-- Prossime chiusure -->
@@ -156,6 +165,25 @@
   <strong>Alle sbarre guarda le sbarre, non il telefono.</strong></p>
 </footer>
 
+<dialog class="picker" id="picker">
+  <form method="dialog" class="picker-head">
+    <h2>Scegli la zona</h2>
+    <button class="icon-btn" value="close" aria-label="Chiudi">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </form>
+  <button class="btn primary wide" id="useLocation">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
+    usa la mia posizione
+  </button>
+  <div class="picker-list" id="pickerList"></div>
+  <p class="fineprint picker-foot">
+    Ogni zona si scarica solo quando la scegli. Le zone si aggiungono dal
+    repository: vedi <code>tools/aree.json</code>.
+  </p>
+</dialog>
+
+<script src="vendor/leaflet/leaflet.js"></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

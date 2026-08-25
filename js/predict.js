@@ -6,12 +6,19 @@
  * stazioni, in orario e in tempo reale. Da li' si ricava tutto il resto.
  *
  * Il percorso e' in tre passi:
- *   1. dove si trova il PL lungo il binario   -> la progressiva, gia' calcolata
- *      offline da OpenStreetMap e salvata in data/linea.json;
+ *   1. dove si trova il PL lungo il binario   -> le "tratte", calcolate
+ *      offline sul grafo dei binari: per ogni coppia di stazioni consecutive
+ *      quanti metri le separano e quali PL ci stanno in mezzo, a che distanza;
  *   2. quando il treno ci passa sopra          -> interpolazione fra le due
- *      stazioni che lo racchiudono, con un profilo di velocita' realistico;
+ *      stazioni, con un profilo di velocita' realistico;
  *   3. quando le barriere scendono e risalgono -> scarti rispetto al transito,
  *      calibrabili sulle osservazioni reali dell'utente.
+ *
+ * Il modello a tratte ha sostituito quello a progressiva chilometrica. Su una
+ * linea isolata bastava un numero per collocare ogni cosa lungo il binario; su
+ * un nodo come Bologna, dove convergono otto linee e la stazione centrale sta
+ * su tutte, quel numero non esiste. Misurare lungo il percorso che il treno fa
+ * davvero descrive bene entrambi i casi.
  */
 
 /* ------------------------------------------------------------------ *
@@ -86,40 +93,32 @@ export function timeToCover(p, x) {
  * ------------------------------------------------------------------ */
 
 /**
- * Istante in cui un treno passa su un PL, dati i due capisaldi che lo
- * racchiudono: partenza dalla stazione precedente e arrivo alla successiva.
+ * Istante in cui un treno passa su un punto della tratta.
  *
- * @param {{chainage:number, time:number}} from stazione a monte
- * @param {{chainage:number, time:number}} to   stazione a valle
- * @param {number} chainage progressiva del PL, in metri
- * @param {number} accel    accelerazione media, m/s^2
+ * @param {number} tA   partenza dalla stazione a monte
+ * @param {number} tB   arrivo alla stazione a valle
+ * @param {number} D    metri di binario fra le due
+ * @param {number} x    metri del PL dalla stazione a monte
+ * @param {object} model
  * @returns {?{time:number, speed:number, fraction:number}}
  */
-export function passageAt(from, to, chainage, accel, vmax) {
-  const D = Math.abs(to.chainage - from.chainage);
-  const T = (to.time - from.time) / 1000;
-  const p = speedProfile(D, T, accel, vmax);
+export function passageOn(tA, tB, D, x, model) {
+  const T = (tB - tA) / 1000;
+  const p = speedProfile(D, T, model.accel, model.vmax_ms);
   if (!p) return null;
-
-  // distanza del PL dalla stazione di partenza, nel verso di marcia
-  const x = Math.abs(chainage - from.chainage);
-  if (x < -1 || x > D + 1) return null;   // il PL non sta in questo tratto
+  if (x < -1 || x > D + 1) return null;
 
   const dt = timeToCover(p, Math.min(Math.max(x, 0), D));
   if (dt == null) return null;
 
-  // velocita' istantanea sul PL, utile per stimare quanto ci mette a liberarlo
+  // velocita' istantanea sul PL, usata per stimare quanto ci mette a liberarlo
   const tAccel = p.V / p.a;
   let speed;
   if (dt <= tAccel) speed = p.a * dt;
   else if (dt <= T - tAccel) speed = p.V;
   else speed = p.a * (T - dt);
 
-  return {
-    time: from.time + dt * 1000,
-    speed: Math.max(speed, 5),
-    fraction: D > 0 ? x / D : 0,
-  };
+  return { time: tA + dt * 1000, speed: Math.max(speed, 5), fraction: D > 0 ? x / D : 0 };
 }
 
 /* ------------------------------------------------------------------ *
@@ -179,36 +178,33 @@ export function mergeWindows(windows) {
  * ------------------------------------------------------------------ */
 
 /**
- * Calcola tutte le chiusure previste per un PL.
+ * Calcola tutte le chiusure previste per un passaggio a livello.
  *
- * @param {object} crossing PL con la sua progressiva
- * @param {Array}  trains   treni normalizzati: { id, label, stops:[{code,time,kind}] }
- * @param {Map}    chainByCode progressiva di ogni stazione
- * @param {object} model    parametri di default
- * @param {object} calib    correzioni misurate su questo PL
+ * @param {number} index  posizione del PL nell'elenco dell'area
+ * @param {Array}  trains treni normalizzati, con le fermate in ordine di orario
+ * @param {object} segments tratte precalcolate, chiave "CODICE_A>CODICE_B"
+ * @param {object} model
+ * @param {object} calib  correzioni misurate su questo PL
  */
-export function closuresFor(crossing, trains, chainByCode, model, calib) {
+export function closuresFor(index, trains, segments, model, calib) {
   const windows = [];
 
   for (const train of trains) {
-    const stops = train.stops.filter((s) => chainByCode.has(s.code));
+    const stops = train.stops;
     for (let i = 0; i < stops.length - 1; i++) {
       const A = stops[i];
       const B = stops[i + 1];
-      const cA = chainByCode.get(A.code);
-      const cB = chainByCode.get(B.code);
+      const seg = segments[`${A.code}>${B.code}`];
+      if (!seg) continue;
 
-      const lo = Math.min(cA, cB);
-      const hi = Math.max(cA, cB);
-      if (crossing.chainage < lo || crossing.chainage > hi) continue;
+      const hit = seg.x.find((e) => e[0] === index);
+      if (!hit) continue;
 
-      const pass = passageAt(
-        { chainage: cA, time: A.depart ?? A.arrive },
-        { chainage: cB, time: B.arrive ?? B.depart },
-        crossing.chainage,
-        model.accel,
-        model.vmax_ms,
-      );
+      const tA = A.depart ?? A.arrive;
+      const tB = B.arrive ?? B.depart;
+      if (!tA || !tB) continue;
+
+      const pass = passageOn(tA, tB, seg.m, hit[1], model);
       if (!pass) continue;
 
       windows.push({
@@ -217,10 +213,10 @@ export function closuresFor(crossing, trains, chainByCode, model, calib) {
           id: train.id, label: train.label, category: train.category,
           origin: train.origin, destination: train.destination,
           delay: train.delay, live: train.live,
-          towards: cB > cA ? "nord" : "sud",
+          from: A.code, to: B.code,
         }],
       });
-      break; // un treno attraversa il PL una volta sola
+      break;   // un treno attraversa il PL una volta sola
     }
   }
 
@@ -235,7 +231,8 @@ export const STATE = {
   CLOSED: "closed",
   CLOSING: "closing",
   OPEN: "open",
-  UNKNOWN: "unknown",
+  UNKNOWN: "unknown",   // nessun treno previsto nel resto della giornata
+  NODATA: "nodata",     // nessun treno di questa linea e' pubblicato: non si sa
 };
 
 /**
@@ -277,26 +274,22 @@ export function stateAt(windows, now) {
  * ------------------------------------------------------------------ */
 
 /**
- * Progressiva a cui si trova il treno in questo istante, se e' in viaggio
- * fra due delle stazioni note. Serve a disegnarlo sullo schema della linea:
- * vedere il treno che si avvicina rende leggibile il perche' della previsione.
+ * Dove si trova il treno adesso: fermo in stazione, oppure in corsa fra due.
  *
- * @returns {?{chainage:number, towards:string, fraction:number}}
+ * Serve a raccontare la previsione ("il REG 2034 e' fra Casalecchio e
+ * Borgonuovo"), non a disegnarlo su una mappa: per quello servirebbe la
+ * geometria di ogni tratta, che pesa troppo per essere spedita al browser.
+ *
+ * @returns {?{dwelling:boolean, at?:string, from?:string, to?:string, fraction?:number}}
  */
-export function trainPosition(train, chainByCode, now, model) {
-  const stops = train.stops.filter((s) => chainByCode.has(s.code));
+export function trainPosition(train, segments, now, model) {
+  const stops = train.stops;
 
-  // Fermo in stazione: sulla Jonica a binario unico le soste per l'incrocio
+  // Fermo in stazione: sulle linee a binario unico le soste per l'incrocio
   // arrivano a cinque minuti, e in quell'intervallo il treno esiste eccome.
   for (const s of stops) {
     if (s.arrive && s.depart && now >= s.arrive && now <= s.depart) {
-      return {
-        chainage: chainByCode.get(s.code),
-        towards: null,
-        fraction: 0,
-        dwelling: true,
-        at: s.code,
-      };
+      return { dwelling: true, at: s.code };
     }
   }
 
@@ -307,33 +300,26 @@ export function trainPosition(train, chainByCode, now, model) {
     const tB = B.arrive ?? B.depart;
     if (!tA || !tB || now < tA || now > tB) continue;
 
-    const cA = chainByCode.get(A.code);
-    const cB = chainByCode.get(B.code);
-    const D = Math.abs(cB - cA);
+    const seg = segments[`${A.code}>${B.code}`];
     const T = (tB - tA) / 1000;
-    const p = speedProfile(D, T, model.accel, model.vmax_ms);
-    if (!p) continue;
+    const p = seg && speedProfile(seg.m, T, model.accel, model.vmax_ms);
 
-    // si cerca la distanza percorsa invertendo per bisezione il tempo di
-    // percorrenza, che e' monotono crescente
-    const target = (now - tA) / 1000;
-    let lo = 0;
-    let hi = D;
-    for (let k = 0; k < 40; k++) {
-      const mid = (lo + hi) / 2;
-      if (timeToCover(p, mid) < target) lo = mid;
-      else hi = mid;
+    let fraction = T > 0 ? (now - tA) / (tB - tA) : 0;
+    if (p) {
+      // con il profilo di velocita' la frazione percorsa non e' quella del
+      // tempo: si inverte per bisezione, il tempo di percorrenza e' monotono
+      let lo = 0;
+      let hi = seg.m;
+      const target = (now - tA) / 1000;
+      for (let k = 0; k < 32; k++) {
+        const mid = (lo + hi) / 2;
+        if (timeToCover(p, mid) < target) lo = mid;
+        else hi = mid;
+      }
+      fraction = seg.m > 0 ? ((lo + hi) / 2) / seg.m : 0;
     }
-    const travelled = (lo + hi) / 2;
 
-    return {
-      chainage: cB > cA ? cA + travelled : cA - travelled,
-      towards: cB > cA ? "nord" : "sud",
-      fraction: D > 0 ? travelled / D : 0,
-      dwelling: false,
-      from: A.code,
-      to: B.code,
-    };
+    return { dwelling: false, from: A.code, to: B.code, fraction };
   }
   return null;
 }

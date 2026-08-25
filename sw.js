@@ -6,7 +6,13 @@
  * cache: un ritardo di dieci minuti fa non serve a nessuno.
  */
 
-const VERSION = "itrain-v2";   // cambiata dopo l'estensione alla linea intera
+const VERSION = "itrain-v3";   // cambiata con il passaggio alle zone e alla mappa
+
+// Il guscio dell'app: piccolo, stabile, si mette in cache all'installazione.
+// I dati delle zone no: sono grandi e sono molti, e scaricarli tutti per
+// tenerli offline vanificherebbe il motivo per cui sono divisi. Ci pensa la
+// strategia "rete prima, cache come riserva": la zona che apri resta
+// disponibile anche senza rete, le altre no.
 const SHELL = [
   "./",
   "index.html",
@@ -19,8 +25,10 @@ const SHELL = [
   "js/calibration.js",
   "js/notify.js",
   "js/theme.js",
-  "data/linea.json",
-  "data/timetable.json",
+  "js/map.js",
+  "vendor/leaflet/leaflet.js",
+  "vendor/leaflet/leaflet.css",
+  "data/aree.json",
   "manifest.json",
   "icons/icon.svg",
   "icons/icon-192.png",
@@ -50,7 +58,8 @@ self.addEventListener("fetch", (e) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;   // proxy: sempre dalla rete
+  // proxy dei dati e piastrelle della mappa: sempre dalla rete, mai in cache
+  if (url.origin !== self.location.origin) return;
 
   // Rete per prima, cache come riserva: i dati statici vengono rigenerati
   // ogni notte e vale la pena prendere la versione fresca quando c'e' rete.

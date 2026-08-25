@@ -1,13 +1,21 @@
-# iTrain — passaggi a livello della Ferrovia Jonica
+# iTrain — passaggi a livello
 
 Sapere se il passaggio a livello è aperto, chiuso o sta per chiudersi
 **prima di uscire di casa**, invece di scoprirlo fermi davanti alle sbarre.
 
-Copre **35 passaggi a livello e 36 stazioni** lungo i 204 km della Jonica, da
-Reggio Calabria Centrale a Cropani. L'app mostra sempre quello più vicino a te.
-
 Applicazione web statica: nessun database, nessun server, si pubblica su
 GitHub Pages così com'è.
+
+**Zone coperte**
+
+| Zona | Passaggi a livello | Treni |
+|---|---|---|
+| Locride e Ferrovia Jonica (Calabria) | 39 su 40 con previsione | 154 |
+| Bologna e provincia (Emilia-Romagna) | 6 su 51 con previsione | 279 |
+
+I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
+scaricare quelli di Bologna. Aggiungere una zona è una voce in
+`tools/aree.json`.
 
 ---
 
@@ -27,31 +35,29 @@ previsto e ritardo reale, da ViaggiaTreno. Da lì si ricava tutto il resto.
 
 ### 1. Dove sta il passaggio a livello, lungo il binario
 
-Calcolato una volta per tutte da OpenStreetMap (`tools/build_data.py`): i
-segmenti della ferrovia Jonica vengono ricuciti in un'unica polilinea di 204 km,
-poi stazioni e passaggi a livello ci vengono proiettati sopra per ottenere la
-**progressiva**, cioè quanti metri di binario li separano.
+Calcolato una volta per tutte (`tools/build_area.py`) costruendo un **grafo dei
+binari** da OpenStreetMap: ogni nodo della rete, ogni segmento, la sua
+lunghezza. Poi, per ogni coppia di stazioni che un treno percorre di seguito, si
+calcola il cammino minimo sulle rotaie e si annota quali passaggi a livello ci
+stanno sopra e a che distanza dalla prima stazione. Sono le **tratte**.
 
-Sulla tratta intera la ferrovia non è una catena semplice — ci sono raccordi che
-creano biforcazioni — quindi lo script costruisce un grafo dei segmenti e tiene
-il percorso più lungo fra due capilinea, scartando i tronchetti laterali.
+Il modello precedente usava una progressiva chilometrica lungo un'unica linea.
+Funzionava sulla Jonica e si è rotto a Bologna: lì convergono otto linee, la
+stazione centrale sta su tutte e una progressiva unica non esiste. In più
+OpenStreetMap, in Emilia-Romagna, non tagga il numero di linea su 1186 segmenti
+su 1397, e i nomi sono incoerenti — "Bologna-Verona" e "Verona-Bologna"
+convivono. Con un grafo il problema non si pone: non serve sapere a quale linea
+appartiene un binario, si misura lungo il percorso che il treno fa davvero.
 
-| Passaggio a livello | Progressiva | Distanza dalla stazione di Siderno |
-|---|---|---|
-| Via Genova | km 15,583 | 196 m |
-| Via Torquato Tasso | km 15,310 | 469 m |
-| Via Cristoforo Colombo | km 15,100 | 679 m |
-| Via Jonio | km 14,588 | 1191 m |
-
-Tutti e quattro stanno fra la stazione e Locri: sono esattamente quelli che
-tagliano la strada verso il mare.
+I binari di servizio sono nel grafo ma pesati sei volte tanto, così un percorso
+non taglia mai per un fascio di manovra.
 
 ### 2. Quando il treno ci passa sopra
 
-Interpolando fra le due stazioni che lo racchiudono — ma **non linearmente**.
-Un treno riparte da fermo e frena fino a fermarsi, quindi vicino alla stazione
-è molto più lento della sua media. Su Via Genova, a 196 metri dalla stazione,
-ignorare questo sposterebbe la previsione di una ventina di secondi.
+Interpolando fra le due stazioni — ma **non linearmente**. Un treno riparte da
+fermo e frena fino a fermarsi, quindi vicino alla stazione è molto più lento
+della sua media. Su Via Genova a Siderno, a 196 metri dalla stazione, ignorare
+questo sposterebbe la previsione di una ventina di secondi.
 
 Si usa un profilo di velocità trapezoidale (accelerazione, crociera, frenata).
 Nota la velocità di crociera V dalla distanza D e dal tempo T di orario
@@ -70,9 +76,35 @@ sostituiscono il valore di targa. Dopo due o tre osservazioni la previsione
 smette di essere generica. Le osservazioni restano in `localStorage`: niente
 database, niente dati che lasciano il telefono, esportabili in JSON.
 
-Le finestre che si sovrappongono vengono fuse: sulla Jonica, a binario unico, i
+Le finestre che si sovrappongono vengono fuse: sulle linee a binario unico i
 treni si incrociano in stazione e capita di vederne due fermi insieme per
 cinque minuti. Per chi è in auto quello è un unico sbarramento, non due.
+
+---
+
+## Il limite dei dati, e perché Bologna è coperta poco
+
+L'app dipende da ViaggiaTreno, che è il sistema di **RFI**. Le linee esercite su
+infrastruttura di altri gestori non ci sono, e a Bologna sono proprio quelle
+con più passaggi a livello:
+
+- Bologna–Portomaggiore e Bologna–Vignola (infrastruttura FER);
+- la tratta Bologna–Porretta: i treni per Porretta che ViaggiaTreno pubblica
+  arrivano da Pistoia, quelli da Bologna no.
+
+Risultato: dei 51 passaggi a livello della provincia, **6 hanno una previsione e
+45 no**. Le linee RFI del nodo bolognese, per contro, sono in gran parte a
+livelli sfalsati e di passaggi a livello ne hanno pochi.
+
+Ho cercato una seconda fonte: TPER pubblica in open data il GTFS degli
+**autobus**, non quello dei treni, e non ho trovato un GTFS ferroviario aperto
+per quelle linee.
+
+**Quei passaggi a livello restano comunque in elenco**, segnati come «dati non
+disponibili» e grigi sulla mappa. Farli sparire sarebbe stata la scelta comoda e
+quella sbagliata: chi apre l'app davanti a uno di essi deve leggere *«non lo
+so»*, non trovare il nulla e concluderne che la zona sia coperta. Se un giorno
+i dati compariranno, si accendono da soli.
 
 ---
 
@@ -116,6 +148,16 @@ schermata Home (Condividi → «Aggiungi a Home»). È una regola di Safari.
 
 ---
 
+## La mappa
+
+Leaflet è **incluso nel repository** (`vendor/leaflet/`, licenza BSD-2) invece
+di essere preso da un CDN: l'app non dipende da un servizio esterno per
+funzionare. Le piastrelle arrivano da OpenStreetMap e quelle sì, richiedono
+rete; senza, restano i cerchi colorati su fondo neutro, che è comunque
+leggibile. In tema scuro le piastrelle vengono invertite via CSS.
+
+---
+
 ## Farla funzionare
 
 ### In locale
@@ -138,54 +180,49 @@ La geolocalizzazione e le notifiche richiedono HTTPS: GitHub Pages lo fornisce.
 
 ### Tenere aggiornati i dati
 
-Due workflow già pronti in `.github/workflows/`, che committano da soli:
-
-| Workflow | Quando | Cosa fa |
-|---|---|---|
-| `aggiorna-dati.yml` | ogni notte alle 3:30 | riscarica l'orario dei treni |
-| `aggiorna-passaggi.yml` | il primo del mese | riscarica i PL da OpenStreetMap |
-
-Entrambi rifiutano di committare se il risultato è sospetto — troppo pochi
-treni, poche fermate medie per treno, meno di quattro PL attorno a Siderno, o
-due stazioni con lo stesso codice: un file troncato è peggio di uno vecchio.
-
-**L'orario notturno non è una comodità, è un vincolo.** ViaggiaTreno impone due
-limiti che insieme decidono la forma dello scanner:
-
-- `partenze` e `arrivi` non restituiscono i treni già passati;
-- `andamentoTreno` — l'unico che dà tutte le fermate di un treno in una sola
-  chiamata — risponde soltanto per i treni con data di partenza odierna.
-
-A notte fonda entrambi spariscono: la giornata è tutta davanti. È questo che
-rende il costo indipendente dal numero di stazioni: interrogarle tutte una per
-una richiederebbe oltre milleseicento chiamate al giorno, mentre così ne bastano
-circa duecentocinquanta indipendentemente da quanto è lunga la tratta.
-
-L'orario si costruisce per accumulo, annotando in quali giorni della settimana
-ciascun treno circola. Finché un giorno è coperto solo in parte l'app lo
-dichiara invece di far finta di niente.
+Il workflow `.github/workflows/aggiorna-aree.yml` rigenera ogni notte tutte le
+zone e committa da solo. Rifiuta di committare se il risultato è sospetto —
+pochi treni, pochi passaggi a livello, nessuno con previsione, codici stazione
+duplicati, o troppe poche fermate medie per treno: un file troncato è peggio di
+uno vecchio. Se una zona fallisce, le altre si aggiornano comunque.
 
 A mano:
 
 ```bash
-python3 tools/build_timetable.py            # orario di oggi (da lanciare di notte)
-python3 tools/build_timetable.py --reset    # ricostruisce da zero
-python3 tools/build_data.py                 # geometria, stazioni e PL
-node tools/test_predict.mjs                 # prova il motore senza rete
+python3 tools/build_area.py jonica              # rigenera tutto (di notte)
+python3 tools/build_area.py bologna --cache-ways --keep-timetable
+node tools/test_predict.mjs jonica              # prova il motore senza rete
 ```
+
+`--cache-ways` riusa i binari già scaricati, `--keep-timetable` riusa l'orario
+del file esistente: insieme rendono istantanea una rigenerazione in cui è
+cambiata solo la logica.
 
 ---
 
-## Estendere ad altre linee
+## Aggiungere una zona
 
-Serve cambiare **due valori** in `tools/build_data.py`: `BBOX` (il riquadro
-geografico) e `LINE_REF` (il numero della linea in OpenStreetMap). Poi si
-rigenerano i dati. Nient'altro.
+Una voce in `tools/aree.json`, delimitata per confine amministrativo o per
+riquadro:
 
-Le stazioni non vanno più elencate a mano. Lo script le prende da
-OpenStreetMap e ne ricava il codice RFI cercandone il nome su ViaggiaTreno,
-**verificando poi con le coordinate**: se la stazione trovata dista più di 600
-metri dal nodo OSM, l'abbinamento viene scartato.
+```json
+{
+  "slug": "modena",
+  "name": "Modena e provincia",
+  "region": "Emilia-Romagna",
+  "osm_area": "Modena",
+  "admin_level": "6",
+  "hubs": 8
+}
+```
+
+Poi `python3 tools/build_area.py modena`. Nient'altro: l'indice delle zone si
+riscrive da solo.
+
+Le stazioni non vanno elencate a mano. Lo script le prende da OpenStreetMap e ne
+ricava il codice RFI cercandone il nome su ViaggiaTreno, **verificando poi con
+le coordinate**: se la stazione trovata dista più di 600 metri dal nodo OSM,
+l'abbinamento viene scartato.
 
 Quella verifica non è formale. `cercaStazione` cerca per prefisso e restituisce
 comunque un risultato anche quando non c'è corrispondenza: alla richiesta
@@ -195,12 +232,9 @@ entrerebbe nei dati in silenzio. C'è anche un controllo sui codici duplicati,
 perché una stessa stazione mappata due volte in OpenStreetMap — succede, ad
 esempio a Catanzaro Lido — non deve generare un doppione.
 
-Resta manuale una cosa sola: `NAME_OVERRIDES`, per i passaggi a livello che
-stanno su strade senza `name` in OpenStreetMap. È anche il posto giusto per
-correggere un nome sbagliato dopo una verifica sul campo.
-
-Il codice non ha nulla di specifico su una località: PL, stazioni e progressive
-arrivano tutti dai file in `data/`.
+Resta manuale una cosa sola: `NAME_OVERRIDES` in `tools/build_area.py`, per i
+passaggi a livello che stanno su strade senza `name` in OpenStreetMap. È anche
+il posto giusto per correggere un nome sbagliato dopo una verifica sul campo.
 
 ---
 
@@ -212,15 +246,20 @@ css/style.css         stile, chiaro e scuro, mobile e desktop
 js/predict.js         motore: profilo di velocità, transiti, finestre di chiusura
 js/trains.js          orario statico + ritardi reali, a strati
 js/rfi.js             client ViaggiaTreno con catena di proxy
+js/map.js             mappa dei passaggi a livello
 js/calibration.js     osservazioni sul campo, in localStorage
 js/notify.js          avvisi programmati
+js/theme.js           tema chiaro, scuro o automatico
 js/geo.js             distanze e geolocalizzazione
 js/app.js             interfaccia e composizione
 sw.js                 cache offline
-js/theme.js           tema chiaro, scuro o automatico
-data/linea.json       linea, stazioni, passaggi a livello, parametri del modello
-data/timetable.json   orario di riferimento, rete di sicurezza
-tools/                generatori dei dati e prova del motore
+vendor/leaflet/       Leaflet 1.9.4, incluso invece che da CDN
+data/aree.json        indice delle zone disponibili
+data/aree/<slug>.json stazioni, PL, tratte, orario e parametri di una zona
+tools/rete.py         grafo dei binari e abbinamento stazioni
+tools/build_area.py   generatore di una zona
+tools/aree.json       definizione delle zone
+tools/test_predict.mjs prova del motore senza rete
 ```
 
 ---
@@ -229,11 +268,12 @@ tools/                generatori dei dati e prova del motore
 
 - **Treni**: [ViaggiaTreno](http://www.viaggiatreno.it) (RFI). API non
   ufficiale e non documentata: può cambiare senza preavviso.
-- **Passaggi a livello e geometria della linea**:
+- **Passaggi a livello, binari, stazioni**:
   [OpenStreetMap](https://www.openstreetmap.org/copyright), licenza ODbL.
+- **Mappa**: [Leaflet](https://leafletjs.com) (BSD-2), piastrelle OpenStreetMap.
 - **Preavviso di chiusura**: valore dichiarato da RFI, poi calibrato sul campo.
 
-Progetto indipendente, non affiliato a RFI o Trenitalia.
+Progetto indipendente, non affiliato a RFI, Trenitalia o TPER.
 
 > **Alle sbarre guarda le sbarre, non il telefono.** Questa è una previsione, e
 > una previsione può sbagliare: un treno merci non in orario, una manovra, un

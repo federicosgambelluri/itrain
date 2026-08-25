@@ -171,7 +171,7 @@ a { color: var(--accent); }
   border-bottom: 1px solid var(--line);
 }
 
-.brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 auto; }
 
 .brand-mark {
   width: 26px; height: 26px; flex: none;
@@ -187,11 +187,16 @@ a { color: var(--accent); }
   background: var(--card-2); border: 1px solid var(--line);
 }
 
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
 .source {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: .74rem; color: var(--muted); white-space: nowrap;
+}
+/* Su schermi stretti il nome della zona e lo stato dei dati si contendono la
+   stessa riga: vince il nome della zona, che dice dove sei. */
+@media (max-width: 560px) {
+  .source #sourceText { display: none; }
 }
 .source-dot {
   width: 7px; height: 7px; border-radius: 99px; background: var(--unknown);
@@ -325,7 +330,8 @@ a { color: var(--accent); }
 .state.open    { background: var(--open-dim);    border-color: color-mix(in srgb, var(--open) 40%, transparent); }
 .state.closing { background: var(--closing-dim); border-color: color-mix(in srgb, var(--closing) 45%, transparent); }
 .state.closed  { background: var(--closed-dim);  border-color: color-mix(in srgb, var(--closed) 45%, transparent); }
-.state.unknown { background: var(--unknown-dim); border-color: var(--line); }
+.state.unknown,
+.state.nodata { background: var(--unknown-dim); border-color: var(--line); }
 
 .state-row { display: flex; align-items: center; gap: 14px; }
 .state-row > div:last-child { min-width: 0; }
@@ -337,7 +343,8 @@ a { color: var(--accent); }
 .state.open    .state-icon { background: color-mix(in srgb, var(--open) 20%, transparent); }
 .state.closing .state-icon { background: color-mix(in srgb, var(--closing) 24%, transparent); }
 .state.closed  .state-icon { background: color-mix(in srgb, var(--closed) 24%, transparent); }
-.state.unknown .state-icon { background: color-mix(in srgb, var(--unknown) 24%, transparent); }
+.state.unknown .state-icon,
+.state.nodata .state-icon { background: color-mix(in srgb, var(--unknown) 24%, transparent); }
 
 /* ------------------------ sbarra animata -------------------------- */
 
@@ -362,7 +369,8 @@ a { color: var(--accent); }
   transition: transform 1.1s cubic-bezier(.34, .8, .3, 1);
 }
 .barrier.open .boom    { transform: rotate(-78deg); }
-.barrier.unknown .boom { transform: rotate(-78deg); }
+.barrier.unknown .boom,
+.barrier.nodata .boom { transform: rotate(-40deg); opacity: .5; }
 .barrier.closing .boom { transform: rotate(-38deg); animation: boom-down 2.4s ease-in-out infinite alternate; }
 .barrier.closed .boom  { transform: rotate(0deg); }
 
@@ -395,7 +403,8 @@ a { color: var(--accent); }
 .state.open .state-word    { color: var(--open); }
 .state.closing .state-word { color: var(--closing); }
 .state.closed .state-word  { color: var(--closed); }
-.state.unknown .state-word { color: var(--muted); }
+.state.unknown .state-word,
+.state.nodata .state-word { color: var(--muted); }
 
 .state-detail { color: var(--text); font-size: .95rem; margin-top: 2px; opacity: .9; }
 .state-detail .big {
@@ -484,47 +493,120 @@ a { color: var(--accent); }
 .action-note.ok { color: var(--open); }
 .action-note.bad { color: var(--closing); }
 
-/* --------------------------- schema linea ------------------------- */
+/* ----------------------------- mappa ------------------------------ */
 
-.strip-scroll {
-  overflow-x: auto; overflow-y: hidden; min-width: 0;
-  margin: 0 calc(var(--pad) * -1); padding: 0 var(--pad);
-  scrollbar-width: thin;
-}
-.strip { display: block; min-width: 460px; width: 100%; height: 156px; }
-.strip .rail { stroke: color-mix(in srgb, var(--muted) 55%, transparent); stroke-width: 3.5; }
-.strip .tie { stroke: color-mix(in srgb, var(--muted) 40%, transparent); stroke-width: 1.6; }
-.strip .tie.major { stroke: color-mix(in srgb, var(--muted) 75%, transparent); stroke-width: 2.2; }
-.strip .edge-label { fill: var(--faint); font-size: 10px; font-weight: 600; letter-spacing: .02em; }
-.strip .st-dot { fill: var(--bg); stroke: var(--muted); stroke-width: 2.5; }
-.strip .st-label { fill: var(--muted); font-size: 10.5px; font-weight: 600; }
-.strip .pl-label { font-size: 10.5px; font-weight: 600; }
-.strip .pl-mark { stroke-width: 2.6; stroke-linecap: round; }
-.strip .train-body { fill: var(--accent); }
-.strip .train-nose { fill: var(--accent); transition: transform .35s ease; }
-
-/* Il treno si sposta di un secondo in un secondo: la transizione lineare sul
-   transform lo fa scorrere invece di farlo saltare a scatti. */
-.strip .train {
-  transition: transform 1s linear;
-  animation: train-in .45s ease both;
-}
-.strip .train.entering { transition: none; }
-.strip .train.dwelling .train-body { fill: color-mix(in srgb, var(--accent) 55%, var(--card)); }
-.strip .train.dwelling .train-nose { opacity: 0; }
-
-@keyframes train-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.map {
+  height: clamp(260px, 46vh, 420px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  z-index: 0;              /* resta sotto la barra superiore appiccicata */
 }
 
-/* il passaggio a livello selezionato respira, per ritrovarlo a colpo d'occhio */
-.strip .pl-halo { animation: halo 2.8s ease-in-out infinite; }
-@keyframes halo {
-  50% { opacity: .18; r: 16; }
+/* Le piastrelle di OpenStreetMap esistono solo in versione chiara. In tema
+   scuro si invertono e si risatura: non e' perfetto come una mappa disegnata
+   apposta, ma evita il rettangolo bianco accecante in mezzo alla pagina. */
+:root:not([data-theme="light"]) .map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7);
 }
-.strip .train-label { fill: var(--bg); font-size: 9px; font-weight: 700; }
-.strip .you { fill: none; stroke: var(--text); stroke-width: 2; stroke-dasharray: 3 3; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .map .leaflet-tile-pane { filter: none; }
+}
+:root[data-theme="dark"] .map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.7);
+}
+
+.map .leaflet-container { font: inherit; background: var(--card-2); }
+.map .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  color: var(--faint); font-size: 10px;
+}
+.map .leaflet-control-attribution a { color: var(--muted); }
+.map .leaflet-bar a {
+  background: var(--card); color: var(--text); border-color: var(--line);
+}
+.map .leaflet-bar a:hover { background: var(--card-2); }
+.map .leaflet-tooltip {
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-size: 12px; font-weight: 600;
+}
+.map .leaflet-tooltip-top::before { border-top-color: var(--line); }
+
+.pl-marker { cursor: pointer; transition: none; }
+.user-marker { pointer-events: none; }
+
+.map-legend {
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  margin: 10px 0 0; font-size: .76rem; color: var(--muted);
+}
+.map-legend .dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 99px;
+  margin-right: 5px; vertical-align: baseline;
+}
+.map-legend .dot.open { background: var(--open); }
+.map-legend .dot.closing { background: var(--closing); }
+.map-legend .dot.closed { background: var(--closed); }
+.map-legend .dot.nodata { background: var(--unknown); }
+.map-hint { margin-left: auto; color: var(--faint); }
+
+/* -------------------------- selettore zona ------------------------ */
+
+.brand-place {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: inherit; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--muted);
+  padding: 3px 7px 3px 9px; border-radius: 99px;
+  background: var(--card-2); border: 1px solid var(--line);
+  cursor: pointer; min-width: 0; flex: 0 1 auto;
+}
+.brand-place:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.brand-place span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.brand-place svg {
+  width: 12px; height: 12px; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+.picker {
+  width: min(520px, calc(100vw - 28px));
+  max-height: min(78vh, 700px);
+  padding: var(--pad);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--card); color: var(--text);
+  box-shadow: 0 24px 70px -20px rgba(0, 0, 0, .7);
+}
+.picker::backdrop { background: rgba(2, 6, 16, .62); backdrop-filter: blur(3px); }
+
+.picker-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.picker-head h2 { font-size: 1.05rem; }
+
+.picker-list { margin-top: 14px; display: grid; gap: 14px; }
+.picker-region {
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--faint); font-weight: 700; margin-bottom: 6px;
+}
+.picker-area {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 12px; margin-bottom: 6px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--card-2); color: inherit; font: inherit;
+  text-align: left; cursor: pointer;
+}
+.picker-area:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.picker-area.current { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--card-2)); }
+.picker-area b { display: block; font-size: .95rem; font-weight: 640; }
+.picker-area span { font-size: .78rem; color: var(--muted); }
+.picker-area .far { margin-left: auto; text-align: right; flex: none; font-size: .78rem; color: var(--faint); }
+.picker-foot { margin: 16px 0 0; }
+.picker code {
+  background: var(--card-2); padding: 1px 5px; border-radius: 5px; font-size: .92em;
+}
 
 /* ---------------------------- timeline ---------------------------- */
 
@@ -582,7 +664,8 @@ a { color: var(--accent); }
 .crossing-pill.open { background: var(--open); }
 .crossing-pill.closing { background: var(--closing); }
 .crossing-pill.closed { background: var(--closed); }
-.crossing-pill.unknown { background: var(--unknown); }
+.crossing-pill.unknown,
+.crossing-pill.nodata { background: var(--unknown); }
 
 .crossing-main { flex: 1; min-width: 0; }
 .crossing-name, .crossing-meta { overflow-wrap: anywhere; }
@@ -602,6 +685,16 @@ a { color: var(--accent); }
 }
 
 /* ----------------------------- testo ------------------------------ */
+
+.nodata-note {
+  margin-top: 16px; padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--card-2);
+  font-size: .88rem; line-height: 1.6; color: var(--muted);
+}
+.nodata-note p { margin: 0 0 .7em; }
+.nodata-note p:last-child { margin: 0; }
+.nodata-note strong { color: var(--text); }
 
 .about-body { font-size: .9rem; color: var(--muted); line-height: 1.65; }
 .about-body strong { color: var(--text); }

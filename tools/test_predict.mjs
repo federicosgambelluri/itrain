@@ -1,53 +1,52 @@
-/** Verifica del motore di previsione sui dati reali, senza rete. */
+/**
+ * Prova del motore di previsione sui dati di un'area, senza rete.
+ *   node tools/test_predict.mjs [slug]
+ */
 import { readFileSync } from "node:fs";
 import { scheduledTrains } from "../js/trains.js";
 import { closuresFor, stateAt, STATE } from "../js/predict.js";
 
-const geo = JSON.parse(readFileSync("data/linea.json", "utf8"));
-const tt = JSON.parse(readFileSync("data/timetable.json", "utf8"));
-const chain = new Map(geo.stations.map((s) => [s.code, s.chainage]));
-
-// domani (martedi'): e' il giorno gia' coperto dall'orario statico
+const slug = process.argv[2] ?? "jonica";
+const area = JSON.parse(readFileSync(`data/aree/${slug}.json`, "utf8"));
 const day = new Date();
-day.setDate(day.getDate() + 1);
 day.setHours(6, 0, 0, 0);
-
-const { trains, exact } = scheduledTrains(tt, day);
-console.log(`${trains.length} treni per ${day.toLocaleDateString("it-IT",{weekday:"long"})}` +
-            ` (giorno coperto dall'orario: ${exact})\n`);
-
+const { trains } = scheduledTrains(area, day);
 const hhmm = (t) => new Date(t).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-const siderno = geo.crossings.filter((c) => c.between.includes("S11850"));
-console.log(`linea: ${geo.crossings.length} PL su ${geo.stations.length} stazioni\n`);
 
-for (const pl of siderno) {
-  const w = closuresFor(pl, trains, chain, geo.model, null);
-  const dist = Math.round(Math.abs(pl.chainage - chain.get("S11850")));
-  console.log(`\n=== ${pl.name}  (${dist} m dalla stazione)  ${w.length} chiusure previste`);
-  let totale = 0;
-  for (const x of w) totale += (x.open - x.close) / 1000;
-  for (const x of w.slice(0, 5)) {
-    const secs = Math.round((x.open - x.close) / 1000);
-    const who = x.trains.map((t) => `${t.label}→${t.destination ?? "?"}`).join(" + ");
-    console.log(`   ${hhmm(x.close)} - ${hhmm(x.open)}  (${secs}s)  ` +
-                `transito ${hhmm(x.pass)} a ${(x.speed * 3.6).toFixed(0)} km/h  ${x.merged ? "[FUSA] " : ""}${who}`);
-  }
-  console.log(`   ... totale giornata: ${(totale / 60).toFixed(0)} minuti di sbarre chiuse`);
+const covered = area.crossings.filter((c) => c.covered !== false);
+console.log(`${area.name}: ${trains.length} treni, ${area.crossings.length} PL ` +
+            `(${covered.length} con previsione), ${Object.keys(area.segments).length} tratte\n`);
+
+let zero = 0, sospette = 0, tot = 0;
+const rows = [];
+area.crossings.forEach((c, i) => {
+  if (c.covered === false) return;
+  const w = closuresFor(i, trains, area.segments, area.model, null);
+  const mins = w.reduce((a, x) => a + (x.open - x.close) / 60000, 0);
+  const worst = Math.max(0, ...w.map((x) => (x.open - x.close) / 60000));
+  if (!w.length) zero++;
+  if (worst > 25) sospette++;
+  tot += w.length;
+  rows.push({ n: c.name, w: w.length, mins: Math.round(mins), worst: Math.round(worst) });
+});
+
+rows.sort((a, b) => b.w - a.w);
+for (const r of rows.slice(0, 6)) {
+  console.log(`  ${r.n.slice(0, 30).padEnd(31)} ${String(r.w).padStart(3)} chiusure  ` +
+              `${String(r.mins).padStart(3)} min/giorno  finestra max ${r.worst} min`);
 }
+console.log(`\nPL coperti senza alcuna chiusura: ${zero}`);
+console.log(`finestre sospette (>25 min): ${sospette}`);
+console.log(`media chiusure per PL coperto: ${(tot / Math.max(covered.length, 1)).toFixed(1)}`);
 
-// stato a un istante scelto
-const pl = siderno.find((c) => c.name === "Via Genova");
-const w = closuresFor(pl, trains, chain, geo.model, null);
-console.log(`\n\n=== Stato di ${pl.name} in vari momenti della giornata`);
-for (const h of [6, 7, 9, 13, 18]) {
-  for (const m of [22, 40]) {
-    const t = new Date(day); t.setHours(h, m, 0, 0);
-    const s = stateAt(w, t.getTime());
-    const etichetta = { [STATE.CLOSED]: "CHIUSO", [STATE.CLOSING]: "IN CHIUSURA",
-                        [STATE.OPEN]: "APERTO", [STATE.UNKNOWN]: "IGNOTO" }[s.state];
-    const det = s.seconds == null ? "" :
-      s.state === STATE.CLOSED ? `riapre fra ${Math.ceil(s.seconds / 60)} min`
-                               : `prossima chiusura fra ${Math.ceil(s.seconds / 60)} min (${hhmm(s.window.close)})`;
-    console.log(`   ${String(h).padStart(2,"0")}:${m}  ${etichetta.padEnd(12)} ${det}`);
-  }
+const c0 = area.crossings.findIndex((c) => c.covered !== false);
+const w0 = closuresFor(c0, trains, area.segments, area.model, null);
+console.log(`\nStato di "${area.crossings[c0].name}" durante la giornata:`);
+for (const h of [6, 8, 13, 18, 21]) {
+  const t = new Date(day); t.setHours(h, 25, 0, 0);
+  const s = stateAt(w0, t.getTime());
+  const et = { [STATE.CLOSED]: "CHIUSO", [STATE.CLOSING]: "IN CHIUSURA",
+               [STATE.OPEN]: "APERTO", [STATE.UNKNOWN]: "IGNOTO" }[s.state];
+  console.log(`  ${String(h).padStart(2, "0")}:25  ${et.padEnd(12)}` +
+              (s.window ? ` prossima finestra ${hhmm(s.window.close)}–${hhmm(s.window.open)}` : ""));
 }

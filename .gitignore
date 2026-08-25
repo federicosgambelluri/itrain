@@ -1,3 +1,9 @@
 data/osm_raw.json
 .DS_Store
 _*.html
+tools/cache/*
+# l'abbinamento stazione->codice e' piccolo e stabile: si versiona,
+# cosi' la CI non ripaga centinaia di chiamate a ogni esecuzione
+!tools/cache/*-stazioni.json
+__pycache__/
+*.pyc
