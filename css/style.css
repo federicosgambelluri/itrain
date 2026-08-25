@@ -310,6 +310,15 @@ a { color: var(--accent); }
   font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;
   color: var(--faint); font-weight: 600;
 }
+.hero-back {
+  margin-left: 8px; padding: 2px 8px;
+  border-radius: 99px; border: 1px solid var(--line);
+  background: var(--card-2); color: var(--accent);
+  font: inherit; font-size: .68rem; text-transform: none; letter-spacing: 0;
+  cursor: pointer;
+}
+.hero-back:hover { border-color: var(--accent); }
+
 .hero-name {
   font-size: clamp(1.4rem, 5.5vw, 1.9rem); margin-top: 2px;
   overflow-wrap: anywhere;

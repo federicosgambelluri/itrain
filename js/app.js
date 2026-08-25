@@ -44,6 +44,7 @@ const state = {
   mapFitted: false,
   showAll: false,
   refine: null,
+  userPicked: false,   // il PL mostrato l'ha scelto l'utente, non la vicinanza
   allPoints: null,
 };
 
@@ -165,6 +166,7 @@ async function loadArea(slug, { remember = true, select = null } = {}) {
     state.segments = area.segments;
     state.hubs = pickHubs(area, 2);
     state.selectedId = select;
+    state.userPicked = Boolean(select);   // cambiando zona si torna al piu' vicino
     state.listLimit = 8;
     state.message = null;
     if (remember) {
@@ -213,9 +215,15 @@ function startGeolocation() {
           return;
         }
       }
-      const auto = !state.selectedId;
       recompute();
-      if (auto) state.selectedId = state.crossings[0]?.id ?? null;
+      // Finche' non e' l'utente a scegliere, la scheda segue il passaggio a
+      // livello piu' vicino, e lo rifa' a ogni lettura della posizione: prima
+      // la scelta veniva fatta una volta sola, quando la posizione ancora non
+      // c'era e le distanze erano misurate dal centro della zona. Restava
+      // agganciata li' anche a chilometri di distanza.
+      if (!state.userPicked) {
+        state.selectedId = state.crossings[0]?.id ?? null;
+      }
       render();
     },
     () => { state.usingFallback = true; render(); },
@@ -488,7 +496,9 @@ function renderHero() {
   hero.innerHTML = `
     <div class="hero-top">
       <div>
-        <div class="hero-label">${isNearest ? "Più vicino a te" : "Selezionato"}</div>
+        <div class="hero-label">${isNearest
+          ? "Più vicino a te"
+          : `Selezionato <button class="hero-back" id="backToNearest">torna al più vicino</button>`}</div>
         <h1 class="hero-name">${c.name}</h1>
         <div class="hero-sub">${st ? `a ${formatDistance(st.d)} dalla stazione di ${st.name}` : ""}</div>
       </div>
@@ -551,6 +561,14 @@ function renderHero() {
     </div>`}
     ${noData ? "" : `<p class="action-note ${state.message?.kind ?? ""}">${state.message?.text ?? nota}</p>`}
   `;
+
+  $("backToNearest")?.addEventListener("click", () => {
+    state.userPicked = false;
+    state.selectedId = state.crossings[0]?.id ?? null;
+    state.message = null;
+    rearmNotifications();
+    render();
+  });
 
   if (!noData) {
     $("notifyBtn").onclick = onNotifyClick;
@@ -630,8 +648,9 @@ function renderList() {
   }
 }
 
-function selectCrossing(id, { scroll = false, focus = false } = {}) {
+function selectCrossing(id, { scroll = false, focus = false, byUser = true } = {}) {
   state.selectedId = id;
+  state.userPicked = byUser;
   state.message = null;
   rearmNotifications();
   render();
