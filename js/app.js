@@ -125,7 +125,13 @@ async function boot() {
   let slug = null;
   try { slug = localStorage.getItem(AREA_KEY); } catch { /* ignorato */ }
   const known = state.index.areas.some((a) => a.slug === slug);
-  await loadArea(known ? slug : state.index.areas[0].slug, { remember: known });
+
+  // Senza scelta salvata e senza posizione si parte dalla zona dichiarata
+  // predefinita: con due dozzine di zone, aprire sulla prima in ordine
+  // alfabetico sarebbe una scelta a caso.
+  const fallbackArea = state.index.areas.find((a) => a.default)
+                    ?? state.index.areas[0];
+  await loadArea(known ? slug : fallbackArea.slug, { remember: known });
 
   startGeolocation();
   setInterval(refresh, REFRESH_MS);
@@ -672,32 +678,54 @@ function renderTimeline() {
  * Selettore di zona
  * ------------------------------------------------------------------ */
 
-function renderPicker() {
+function renderPicker(filtro = "") {
   const list = $("pickerList");
-  const byRegion = new Map();
-  for (const a of state.index.areas) {
-    if (!byRegion.has(a.region)) byRegion.set(a.region, []);
-    byRegion.get(a.region).push(a);
+  const q = filtro.trim().toLowerCase();
+  const match = (a) => !q || a.name.toLowerCase().includes(q) ||
+                       a.region.toLowerCase().includes(q);
+
+  const scheda = (a, mostraDistanza) => {
+    const far = mostraDistanza && !state.usingFallback
+      ? `<span class="far">${formatDistance(areaDistance(a, state.position))}</span>` : "";
+    const cop = a.covered === a.crossings
+      ? `${a.crossings} passaggi a livello`
+      : `${a.covered} di ${a.crossings} con previsione`;
+    return `
+      <button class="picker-area ${a.slug === state.area?.slug ? "current" : ""}" data-slug="${a.slug}">
+        <span>
+          <b>${a.name}</b>
+          <span>${cop} · ${a.trains} treni · ${a.size_kb} KB</span>
+        </span>
+        ${far}
+      </button>`;
+  };
+
+  const blocchi = [];
+
+  // Con due dozzine di zone, quelle vicine vanno messe davanti: e' quasi
+  // sempre una di loro quella che si cerca.
+  if (!state.usingFallback && !q) {
+    const vicine = [...state.index.areas]
+      .map((a) => ({ ...a, d: areaDistance(a, state.position) }))
+      .sort((x, y) => x.d - y.d)
+      .slice(0, 3);
+    blocchi.push(`<div><div class="picker-region">Vicino a te</div>
+      ${vicine.map((a) => scheda(a, true)).join("")}</div>`);
   }
 
-  list.innerHTML = [...byRegion].map(([region, areas]) => `
-    <div>
-      <div class="picker-region">${region}</div>
-      ${areas.map((a) => {
-        const far = state.usingFallback ? "" :
-          `<span class="far">${formatDistance(areaDistance(a, state.position))}</span>`;
-        return `
-          <button class="picker-area ${a.slug === state.area?.slug ? "current" : ""}" data-slug="${a.slug}">
-            <span>
-              <b>${a.name}</b>
-              <span>${a.covered === a.crossings
-                ? `${a.crossings} passaggi a livello`
-                : `${a.covered} di ${a.crossings} con previsione`} · ${a.trains} treni · ${a.size_kb} KB</span>
-            </span>
-            ${far}
-          </button>`;
-      }).join("")}
-    </div>`).join("");
+  const perRegione = new Map();
+  for (const a of state.index.areas) {
+    if (!match(a)) continue;
+    if (!perRegione.has(a.region)) perRegione.set(a.region, []);
+    perRegione.get(a.region).push(a);
+  }
+  for (const [region, areas] of perRegione) {
+    blocchi.push(`<div><div class="picker-region">${region}</div>
+      ${areas.map((a) => scheda(a, true)).join("")}</div>`);
+  }
+
+  list.innerHTML = blocchi.join("");
+  $("pickerEmpty").hidden = perRegione.size > 0;
 
   for (const btn of list.querySelectorAll(".picker-area")) {
     btn.onclick = () => {
@@ -797,7 +825,13 @@ function wireControls() {
     $("theme").setAttribute("aria-label", theme.LABELS[mode]);
   };
 
-  $("areaBtn").onclick = () => { renderPicker(); $("picker").showModal(); };
+  $("areaBtn").onclick = () => {
+    $("pickerSearch").value = "";
+    renderPicker();
+    $("picker").showModal();
+  };
+
+  $("pickerSearch").oninput = (e) => renderPicker(e.target.value);
 
   $("useLocation").onclick = () => {
     $("picker").close();

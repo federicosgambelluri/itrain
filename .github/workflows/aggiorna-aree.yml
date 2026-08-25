@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       zona:
-        description: "Una sola zona (slug) oppure vuoto per tutte"
+        description: "Una zona o piu' (slug separati da spazio), vuoto per tutte"
         required: false
         default: ""
 
@@ -29,7 +29,7 @@ concurrency:
 jobs:
   zone:
     runs-on: ubuntu-latest
-    timeout-minutes: 200
+    timeout-minutes: 330
 
     steps:
       - uses: actions/checkout@v4

@@ -176,7 +176,13 @@
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg>
     usa la mia posizione
   </button>
+  <label class="picker-search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+    <input type="search" id="pickerSearch" placeholder="Cerca una zona o una regione"
+           autocomplete="off" spellcheck="false">
+  </label>
   <div class="picker-list" id="pickerList"></div>
+  <p class="picker-empty" id="pickerEmpty" hidden>Nessuna zona con questo nome.</p>
   <p class="fineprint picker-foot">
     Ogni zona si scarica solo quando la scegli. Le zone si aggiungono dal
     repository: vedi <code>tools/aree.json</code>.

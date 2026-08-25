@@ -627,11 +627,14 @@ def scan_with_coverage(day, stations, graph, n_hubs, codes):
 
 def update_index():
     """Riscrive l'elenco delle aree disponibili leggendo i file generati."""
+    definizioni = {a["slug"]: a for a in json.load(open(AREE))}
     areas = []
     for fn in sorted(os.listdir(OUTDIR)):
         if not fn.endswith(".json"):
             continue
         d = json.load(open(f"{OUTDIR}/{fn}"))
+        if definizioni.get(d["slug"], {}).get("default"):
+            d["default"] = True
         areas.append({
             "slug": d["slug"], "name": d["name"], "region": d["region"],
             "bbox": d["bbox"], "generated": d["generated"],
@@ -639,6 +642,7 @@ def update_index():
             "covered": d.get("covered", len(d["crossings"])), "stations": len(d["stations"]),
             "trains": len(d["trains"]),
             "size_kb": round(os.path.getsize(f"{OUTDIR}/{fn}") / 1024),
+            **({"default": True} if d.get("default") else {}),
         })
     areas.sort(key=lambda a: (a["region"], a["name"]))
     json.dump({"generated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),

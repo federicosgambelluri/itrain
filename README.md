@@ -6,12 +6,21 @@ Sapere se il passaggio a livello è aperto, chiuso o sta per chiudersi
 Applicazione web statica: nessun database, nessun server, si pubblica su
 GitHub Pages così com'è.
 
+Copre **Calabria, Sicilia ed Emilia-Romagna**: 24 zone, una per provincia più
+la fascia jonica della Locride, che segue la linea invece del confine
+amministrativo.
+
 **Zone coperte**
 
 <!-- zone:inizio -->
 | Zona | Regione | Passaggi a livello | Treni | Peso |
 |---|---|---|---|---|
+| Catanzaro e provincia | Calabria | tutti e 18 | 56 | 17 KB |
+| Cosenza e provincia | Calabria | **30 su 31** con previsione | 39 | 27 KB |
+| Crotone e provincia | Calabria | tutti e 16 | 24 | 14 KB |
 | Locride e Ferrovia Jonica | Calabria | tutti e 40 | 111 | 77 KB |
+| Reggio Calabria e provincia | Calabria | tutti e 17 | 57 | 37 KB |
+| Vibo Valentia e provincia | Calabria | tutti e 6 | 28 | 19 KB |
 | Bologna e provincia | Emilia-Romagna | **21 su 51** con previsione | 167 | 59 KB |
 | Ferrara e provincia | Emilia-Romagna | **38 su 104** con previsione | 76 | 42 KB |
 | Forlì-Cesena e provincia | Emilia-Romagna | tutti e 3 | 40 | 25 KB |
@@ -21,8 +30,17 @@ GitHub Pages così com'è.
 | Ravenna e provincia | Emilia-Romagna | **89 su 114** con previsione | 106 | 66 KB |
 | Reggio Emilia e provincia | Emilia-Romagna | **46 su 93** con previsione | 69 | 39 KB |
 | Rimini e provincia | Emilia-Romagna | **8 su 9** con previsione | 38 | 17 KB |
+| Agrigento e provincia | Sicilia | **17 su 49** con previsione | 6 | 9 KB |
+| Caltanissetta e provincia | Sicilia | **11 su 24** con previsione | 33 | 13 KB |
+| Catania e provincia | Sicilia | **32 su 36** con previsione | 95 | 42 KB |
+| Enna e provincia | Sicilia | tutti e 20 | 20 | 10 KB |
+| Messina e provincia | Sicilia | tutti e 10 | 92 | 39 KB |
+| Palermo e provincia | Sicilia | **35 su 48** con previsione | 127 | 50 KB |
+| Ragusa e provincia | Sicilia | **39 su 40** con previsione | 21 | 16 KB |
+| Siracusa e provincia | Sicilia | **47 su 50** con previsione | 52 | 24 KB |
+| Trapani e provincia | Sicilia | tutti e 102 | 29 | 35 KB |
 
-In totale **346 passaggi a livello con previsione** su 521 censiti, in 10 zone.
+In totale **746 passaggi a livello con previsione** su 988 censiti, in 24 zone.
 <!-- zone:fine -->
 
 I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
@@ -116,9 +134,20 @@ omonimo l'abbinamento sarebbe un terno al lotto, e allora è meglio rinunciare.
 ## Il limite dei dati
 
 L'app dipende da ViaggiaTreno, che è il sistema di **RFI**. Le linee esercite su
-infrastruttura di altri gestori spesso non ci sono, e in Emilia-Romagna sono
-proprio quelle con più passaggi a livello: la rete FER attorno a Reggio Emilia,
-la Ferrara–Codigoro, la Bologna–Vignola.
+infrastruttura di altri gestori spesso non ci sono, e la copertura cambia molto
+da regione a regione:
+
+| Regione | Passaggi a livello con previsione |
+|---|---|
+| Calabria | 127 su 128 |
+| Sicilia | 313 su 379 |
+| Emilia-Romagna | 306 su 481 |
+
+In Calabria la rete è quasi tutta RFI e la copertura è praticamente completa. In
+Emilia-Romagna no: le linee con più passaggi a livello sono spesso FER — la rete
+attorno a Reggio Emilia, la Ferrara–Codigoro, la Bologna–Vignola — e i loro
+treni non compaiono. In Sicilia mancano soprattutto la Ferrovia Circumetnea e
+alcune tratte a servizio ridotto.
 
 Non tutte però mancano. La **Bologna–Portomaggiore** ha i treni pubblicati da
 Budrio in poi, e la copertura di intere province — Piacenza, Parma, Ravenna —

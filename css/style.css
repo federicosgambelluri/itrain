@@ -595,6 +595,29 @@ a { color: var(--accent); }
 }
 .picker-head h2 { font-size: 1.05rem; }
 
+.picker-search {
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 12px; padding: 0 12px;
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--card-2);
+}
+.picker-search:focus-within { border-color: var(--accent); }
+.picker-search svg {
+  width: 16px; height: 16px; flex: none;
+  fill: none; stroke: var(--faint); stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.picker-search input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: none;
+  color: var(--text); font: inherit; font-size: .92rem; padding: 11px 0;
+}
+.picker-search input::placeholder { color: var(--faint); }
+
+.picker-empty {
+  margin: 18px 0 0; text-align: center;
+  font-size: .88rem; color: var(--faint);
+}
+
 .picker-list { margin-top: 14px; display: grid; gap: 14px; }
 .picker-region {
   font-size: .7rem; text-transform: uppercase; letter-spacing: .1em;

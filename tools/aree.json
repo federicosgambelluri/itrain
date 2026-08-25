@@ -17,7 +17,8 @@
       38.95,
       16.85
     ],
-    "hubs": 5
+    "hubs": 5,
+    "default": true
   },
   {
     "slug": "piacenza",
@@ -80,6 +81,118 @@
     "name": "Rimini e provincia",
     "region": "Emilia-Romagna",
     "osm_area": "Rimini",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "reggio-calabria",
+    "name": "Reggio Calabria e provincia",
+    "region": "Calabria",
+    "osm_area": "Reggio Calabria",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "catanzaro",
+    "name": "Catanzaro e provincia",
+    "region": "Calabria",
+    "osm_area": "Catanzaro",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "cosenza",
+    "name": "Cosenza e provincia",
+    "region": "Calabria",
+    "osm_area": "Cosenza",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "crotone",
+    "name": "Crotone e provincia",
+    "region": "Calabria",
+    "osm_area": "Crotone",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "vibo-valentia",
+    "name": "Vibo Valentia e provincia",
+    "region": "Calabria",
+    "osm_area": "Vibo Valentia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "palermo",
+    "name": "Palermo e provincia",
+    "region": "Sicilia",
+    "osm_area": "Palermo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "catania",
+    "name": "Catania e provincia",
+    "region": "Sicilia",
+    "osm_area": "Catania",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "messina",
+    "name": "Messina e provincia",
+    "region": "Sicilia",
+    "osm_area": "Messina",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "siracusa",
+    "name": "Siracusa e provincia",
+    "region": "Sicilia",
+    "osm_area": "Siracusa",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "ragusa",
+    "name": "Ragusa e provincia",
+    "region": "Sicilia",
+    "osm_area": "Ragusa",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "agrigento",
+    "name": "Agrigento e provincia",
+    "region": "Sicilia",
+    "osm_area": "Agrigento",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "caltanissetta",
+    "name": "Caltanissetta e provincia",
+    "region": "Sicilia",
+    "osm_area": "Caltanissetta",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "enna",
+    "name": "Enna e provincia",
+    "region": "Sicilia",
+    "osm_area": "Enna",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "trapani",
+    "name": "Trapani e provincia",
+    "region": "Sicilia",
+    "osm_area": "Trapani",
     "admin_level": "6",
     "hubs": 8
   }
