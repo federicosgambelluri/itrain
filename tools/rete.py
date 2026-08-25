@@ -16,7 +16,16 @@ sono quelli che quel treno chiudera'.
 """
 import heapq, json, math, subprocess, sys, time
 
-OVERPASS = "https://overpass-api.de/api/interpreter"
+# Piu' istanze Overpass: quella principale limita le richieste ravvicinate e
+# su una serie di zone si viene respinti. Ruotando fra i mirror una zona non
+# fallisce solo perche' un server ha detto di no.
+# (overpass.osm.ch e' escluso: ha solo dati svizzeri.)
+OVERPASS_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 VT = "http://www.viaggiatreno.it/infomobilitamobile/resteasy/viaggiatreno"
 
 # I binari di servizio esistono nel grafo ma vanno evitati: un percorso che
@@ -36,7 +45,7 @@ def _curl(args, tries, what, allow_empty=False):
     last = ""
     for n in range(tries):
         if n:
-            wait = 4 * n
+            wait = 8 * n * n
             print(f"    {what} non risponde, riprovo fra {wait}s...", file=sys.stderr)
             time.sleep(wait)
         r = subprocess.run(args, capture_output=True, text=True)
@@ -51,12 +60,41 @@ def _curl(args, tries, what, allow_empty=False):
     raise RuntimeError(f"{what} non risponde dopo {tries} tentativi: {last[:160]!r}")
 
 
-def overpass(query, tries=4):
-    return _curl(["curl", "-s", "-m", "300", "-G", OVERPASS,
-                  "--data-urlencode", "data=" + query], tries, "Overpass")
+def overpass(query, rounds=3):
+    """Interroga Overpass provando i mirror a turno.
+
+    A ogni giro si passano in rassegna tutti i mirror; se nessuno risponde si
+    aspetta sempre di piu' prima di ricominciare, perche' il limite di
+    frequenza si sblocca da solo dopo qualche minuto.
+    """
+    errors = []
+    for r in range(rounds):
+        if r:
+            wait = 45 * r
+            print(f"    nessun mirror Overpass disponibile, riprovo fra {wait}s...",
+                  file=sys.stderr)
+            time.sleep(wait)
+        for url in OVERPASS_MIRRORS:
+            out = subprocess.run(
+                ["curl", "-s", "-m", "300", "-G", url,
+                 "--data-urlencode", "data=" + query],
+                capture_output=True, text=True).stdout.strip()
+            if out.startswith("{"):
+                try:
+                    return json.loads(out)
+                except json.JSONDecodeError:
+                    pass
+            errors.append(url.split("/")[2])
+    raise RuntimeError("Overpass non risponde su nessun mirror: "
+                       + ", ".join(dict.fromkeys(errors)))
 
 
-def vt(path, tries=3):
+def vt(path, tries=3, raw=False):
+    """Chiama ViaggiaTreno. Con raw=True ritorna il testo: /regione da' un numero."""
+    if raw:
+        r = subprocess.run(["curl", "-s", "-m", "45", VT + path],
+                           capture_output=True, text=True)
+        return r.stdout.strip()
     return _curl(["curl", "-s", "-m", "45", VT + path], tries, "ViaggiaTreno",
                  allow_empty=True) or []
 
@@ -190,31 +228,85 @@ def name_variants(name):
     return uniq
 
 
+def _normalise(name):
+    """Forma confrontabile di un nome di stazione fra OSM e ViaggiaTreno."""
+    out = (name.upper()
+           .replace("À", "A").replace("È", "E").replace("É", "E")
+           .replace("Ì", "I").replace("Ò", "O").replace("Ù", "U")
+           .replace("'", " ").replace(".", " ").replace("-", " "))
+    for lungo, breve in (("SANT ", "S "), ("SANTA ", "S "), ("SANTO ", "S "),
+                         ("SAN ", "S ")):
+        out = out.replace(lungo, breve)
+    return " ".join(out.split())
+
+
+def station_coords(code, cache):
+    """Coordinate di una stazione ViaggiaTreno, o None se non le pubblica.
+
+    L'ultimo segmento di dettaglioStazione e' l'indice di regione, e va preso
+    da /regione/<codice>: passandone uno sbagliato il servizio non da' errore
+    ma risponde con latitudine 0, coordinate che sembrano valide e non lo sono.
+    E' un tranello silenzioso -- prima le stazioni fuori dalla regione 1
+    venivano tutte scartate senza motivo apparente.
+    """
+    if code in cache:
+        return cache[code]
+
+    reg = vt(f"/regione/{code}", raw=True)
+    coords = None
+    if isinstance(reg, str) and reg.strip().isdigit():
+        det = vt(f"/dettaglioStazione/{code}/{reg.strip()}")
+        lat = (det or {}).get("lat")
+        lon = (det or {}).get("lon")
+        # latitudine 0 e' il valore che il servizio restituisce quando non sa
+        if lat and lon and abs(lat) > 1:
+            coords = (lat, lon)
+    cache[code] = coords
+    return coords
+
+
 def resolve_code(name, pt, cache):
     """Codice ViaggiaTreno di una stazione OSM, verificato sulle coordinate.
 
-    La verifica non e' una formalita': cercaStazione risponde per prefisso e
+    La verifica non e' una formalita': cercaStazione cerca per prefisso e
     restituisce comunque un risultato anche quando non esiste corrispondenza
     (a "REGGIO DI CALABRIA AEROPORTO" propone "REGGIO DI CALABRIA ARCHI").
     Senza il controllo sulla distanza quell'errore entrerebbe nei dati zitto.
+
+    Alcune stazioni pero' le coordinate non le hanno affatto: capita sulle
+    linee di gestori diversi da RFI, come la Bologna-Portomaggiore. Scartarle
+    farebbe sparire linee intere che invece i treni li hanno. Per quelle si
+    ripiega sul nome identico, e solo se la ricerca restituisce un unico
+    candidato con quel nome: un omonimo renderebbe l'abbinamento un terno al
+    lotto, e allora e' meglio rinunciare.
+
+    Ritorna (codice, distanza_m|None, nome_viaggiatreno, verificato).
     """
     best = None
+    exact = {}
+    target = _normalise(name)
+
     for attempt in name_variants(name):
         for cand in vt("/cercaStazione/" + attempt.replace(" ", "%20")):
             code = cand.get("id")
             if not code:
                 continue
-            if code not in cache:
-                det = vt(f"/dettaglioStazione/{code}/1")
-                cache[code] = ((det or {}).get("lat") and (det["lat"], det["lon"])) or None
-            if not cache[code]:
-                continue
-            d = haversine(pt, cache[code])
-            if d < MATCH_WITHIN and (best is None or d < best[1]):
-                best = (code, d, cand.get("nomeLungo"))
+            coords = station_coords(code, cache)
+            if coords:
+                d = haversine(pt, coords)
+                if d < MATCH_WITHIN and (best is None or d < best[1]):
+                    best = (code, d, cand.get("nomeLungo"), True)
+            elif _normalise(cand.get("nomeLungo") or "") == target:
+                exact[code] = cand.get("nomeLungo")
         if best and best[1] < 120:
             break
-    return best
+
+    if best:
+        return best
+    if len(exact) == 1:
+        code, nome = next(iter(exact.items()))
+        return (code, None, nome, False)
+    return None
 
 
 def dedupe_by_code(matched):
@@ -223,10 +315,15 @@ def dedupe_by_code(matched):
     Succede quando OpenStreetMap mappa la stessa stazione due volte, o quando
     l'abbinamento sbaglia. Si tiene la piu' vicina e si segnala l'altra.
     """
+    # gli abbinamenti verificati sulle coordinate battono quelli sul solo nome
+    matched = sorted(matched, key=lambda s: (s.get("verified") is False,
+                                             s.get("match_m") if s.get("match_m") is not None else 1e9))
     by_code, dropped = {}, []
     for st in matched:
         cur = by_code.get(st["code"])
-        if cur is None or st["match_m"] < cur["match_m"]:
+        key = lambda x: (x.get("verified") is False,
+                         x["match_m"] if x.get("match_m") is not None else 1e9)
+        if cur is None or key(st) < key(cur):
             if cur is not None:
                 dropped.append(f"{cur['name']} (codice {cur['code']} gia' assegnato)")
             by_code[st["code"]] = st

@@ -20,6 +20,7 @@ Va eseguito di notte: la scansione dell'orario usa andamentoTreno, che
 risponde solo per i treni con data di partenza odierna.
 """
 import argparse, json, os, sys, time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -41,6 +42,16 @@ NAME_OVERRIDES = {
 MERGE_WITHIN = 45      # nodi PL piu' vicini di cosi' sono lo stesso attraversamento
 SNAP_STATION = 400     # quanto lontano cercare il binario sotto una stazione
 
+# Margine oltre il confine della zona per binari e stazioni.
+#
+# I passaggi a livello si elencano dentro il confine, ma il percorso di un
+# treno che li attraversa spesso comincia o finisce fuori: ritagliando tutto
+# sul confine, i PL vicino al bordo resterebbero senza tratta e verrebbero
+# dichiarati "senza dati" pur essendo su linee coperte. Circa tredici
+# chilometri bastano a chiudere le tratte di confine senza tirare dentro
+# mezza regione.
+BUFFER_DEG = 0.12
+
 MODEL = {
     "lead_close_s": 150,
     "lead_open_s": 40,
@@ -51,12 +62,26 @@ MODEL = {
 
 
 def selector(area):
-    """Frammento Overpass che delimita l'area, per nome amministrativo o riquadro."""
+    """Frammento Overpass che delimita la zona, per confine o per riquadro."""
     if area.get("osm_area"):
         return (f'area["admin_level"="{area.get("admin_level","6")}"]'
                 f'["name"="{area["osm_area"]}"]->.p;', "(area.p)")
     s, w, n, e = area["bbox"]
     return "", f"({s},{w},{n},{e})"
+
+
+def wide_bbox(area):
+    """Riquadro della zona allargato del margine, per binari e stazioni."""
+    if area.get("bbox"):
+        s, w, n, e = area["bbox"]
+    else:
+        r = overpass(f'[out:json][timeout:120];'
+                     f'rel["admin_level"="{area.get("admin_level","6")}"]'
+                     f'["boundary"="administrative"]["name"="{area["osm_area"]}"];out bb;')
+        b = r["elements"][0]["bounds"]
+        s, w, n, e = b["minlat"], b["minlon"], b["maxlat"], b["maxlon"]
+    return (round(s - BUFFER_DEG, 4), round(w - BUFFER_DEG, 4),
+            round(n + BUFFER_DEG, 4), round(e + BUFFER_DEG, 4))
 
 
 # ------------------------------------------------------------------ #
@@ -66,22 +91,48 @@ def fetch_ways(area, use_cache):
     if use_cache and os.path.exists(path):
         print("  (uso la copia locale dei binari)", file=sys.stderr)
         return json.load(open(path))["elements"]
-    head, scope = selector(area)
-    data = overpass(f'[out:json][timeout:280];{head}'
-                    f'way["railway"~"^(rail|light_rail|narrow_gauge)$"]{scope};'
-                    f'out body geom;')
+
+    s, w, n, e = wide_bbox(area)
+    try:
+        data = overpass(f'[out:json][timeout:280];'
+                        f'way["railway"~"^(rail|light_rail|narrow_gauge)$"]'
+                        f'({s},{w},{n},{e});out body geom;')
+    except RuntimeError:
+        # Overpass limita le richieste ravvicinate e su una serie di zone
+        # capita di essere respinti. Una copia locale, anche di ieri, e'
+        # meglio che interrompere l'aggiornamento di tutta la zona: i binari
+        # cambiano molto piu' lentamente degli orari.
+        if os.path.exists(path):
+            print("  Overpass non risponde: uso la copia locale dei binari",
+                  file=sys.stderr)
+            return json.load(open(path))["elements"]
+        raise
+
     os.makedirs(CACHE, exist_ok=True)
     json.dump(data, open(path, "w"))
     return data["elements"]
 
 
-def fetch_nodes(area):
+def fetch_nodes(area, use_cache=False):
+    """PL dentro il confine; stazioni anche oltre, per chiudere le tratte."""
+    path = os.path.join(CACHE, f"{area['slug']}-nodes.json")
+    if use_cache and os.path.exists(path):
+        print("  (uso la copia locale di stazioni e PL)", file=sys.stderr)
+        return json.load(open(path))
+
     head, scope = selector(area)
-    return overpass(f'[out:json][timeout:280];{head}'
-                    f'( node["railway"="level_crossing"]{scope};'
-                    f'  node["railway"="station"]{scope};'
-                    f'  node["railway"="halt"]{scope}; );'
-                    f'out body;')["elements"]
+    xs = overpass(f'[out:json][timeout:280];{head}'
+                  f'node["railway"="level_crossing"]{scope};out body;')["elements"]
+    time.sleep(3)
+    s, w, n, e = wide_bbox(area)
+    st = overpass(f'[out:json][timeout:280];'
+                  f'( node["railway"="station"]({s},{w},{n},{e});'
+                  f'  node["railway"="halt"]({s},{w},{n},{e}); );'
+                  f'out body;')["elements"]
+    out = xs + st
+    os.makedirs(CACHE, exist_ok=True)
+    json.dump(out, open(path, "w"))
+    return out
 
 
 def road_names(ids):
@@ -282,7 +333,14 @@ def main():
 
     print("Scarico stazioni e passaggi a livello...", file=sys.stderr)
     time.sleep(3)
-    nodes = fetch_nodes(area)
+    try:
+        nodes = fetch_nodes(area, args.cache_ways)
+    except RuntimeError:
+        path = os.path.join(CACHE, f"{area['slug']}-nodes.json")
+        if not os.path.exists(path):
+            raise
+        print("  Overpass non risponde: uso la copia locale dei nodi", file=sys.stderr)
+        nodes = json.load(open(path))
     raw_x = [n for n in nodes if n["tags"].get("railway") == "level_crossing"]
     raw_s = [n for n in nodes if n["tags"].get("railway") in ("station", "halt")
              and n["tags"].get("name")]
@@ -308,11 +366,13 @@ def main():
         k = str(el["id"])
         if k not in memo:
             got = resolve_code(el["tags"]["name"], (el["lat"], el["lon"]), cache)
-            memo[k] = [got[0], round(got[1], 1)] if got else None
+            memo[k] = ([got[0], round(got[1], 1) if got[1] is not None else None, got[3]]
+                       if got else None)
             if i % 20 == 0:
                 print(f"  [{i}/{len(raw_s)}] {len(matched)} abbinate", file=sys.stderr)
         if memo[k]:
-            matched.append({"code": memo[k][0], "match_m": memo[k][1],
+            code, dist, verified = (memo[k] + [True])[:3]
+            matched.append({"code": code, "match_m": dist, "verified": verified,
                             "name": el["tags"]["name"],
                             "lat": el["lat"], "lon": el["lon"]})
         else:
@@ -321,7 +381,9 @@ def main():
     json.dump(memo, open(memo_path, "w"))
     stations, dropped = dedupe_by_code(matched)
     stations.sort(key=lambda x: x["name"])
-    print(f"  {len(stations)} stazioni con codice, "
+    n_nome = sum(1 for s in stations if s.get("verified") is False)
+    print(f"  {len(stations)} stazioni con codice "
+          f"({n_nome} abbinate sul solo nome, senza coordinate pubblicate), "
           f"{len(unmatched)+len(dropped)} escluse", file=sys.stderr)
 
     day = datetime.now() + timedelta(days=args.day_offset)
@@ -334,8 +396,12 @@ def main():
               file=sys.stderr)
     else:
         print(f"\nOrario del {day:%d/%m/%Y} ({GIORNI[day.weekday()]}):", file=sys.stderr)
-        trains = scan_with_coverage(day, stations, graph, area.get("hubs", 6),
-                                    {s["code"] for s in stations})
+        codes = {s["code"] for s in stations}
+        if args.day_offset > 0:
+            trains = scan_future_day(day, stations, codes)
+        else:
+            trains = scan_with_coverage(day, stations, graph,
+                                        area.get("hubs", 6), codes)
 
     print("\nCalcolo le tratte sul grafo...", file=sys.stderr)
     segments, covered = build_segments(trains, stations, xings, graph)
@@ -349,6 +415,22 @@ def main():
     # compaiono su ViaggiaTreno. Chi apre l'app davanti a uno di quei passaggi
     # deve leggere "non ho i dati", non trovare il nulla e concludere che la
     # zona sia coperta.
+    # Un treno che non attraversa nessun passaggio a livello non serve a
+    # niente: occupa spazio nel file che il telefono deve scaricare. Si tengono
+    # solo quelli che percorrono almeno una tratta con un PL sopra.
+    utili = {k for k, seg in segments.items() if seg["x"]}
+    prima = len(trains)
+    trains = [t for t in trains
+              if any(f'{a["s"]}>{b["s"]}' in utili
+                     for a, b in zip(t["stops"], t["stops"][1:]))]
+    segments = {k: v for k, v in segments.items() if v["x"]}
+    print(f"  treni utili: {len(trains)} su {prima}; "
+          f"tratte con almeno un PL: {len(segments)}", file=sys.stderr)
+
+    # e le stazioni che nessuna tratta utile tocca
+    vive = {c for k in segments for c in k.split(">")}
+    stations = [s for s in stations if s["code"] in vive]
+
     for i, x in enumerate(xings):
         x["covered"] = i in covered
         x["_i"] = i
@@ -444,6 +526,76 @@ def pick_hubs(stations, graph, n):
         if st not in chosen:
             chosen.append(st)
     return chosen
+
+
+# Passi di 90 minuti: e' all'incirca la finestra che partenze/arrivi
+# restituiscono, quindi le fasce si toccano senza lasciare buchi.
+SLOT_MIN = 90
+WORKERS = 4      # ViaggiaTreno tollera qualche richiesta in parallelo, non molte
+
+
+def scan_future_day(day, stations, codes):
+    """Orario di un giorno futuro, interrogando ogni stazione.
+
+    E' la via alternativa a quella notturna. andamentoTreno restituisce tutte
+    le fermate di un treno in una chiamata sola, ma risponde solo per i treni
+    con data di partenza odierna: per guardare avanti di un giorno resta solo
+    partenze/arrivi stazione per stazione, che e' piu' costoso ma funziona
+    sempre. L'unione dei due elenchi da', per ogni treno, l'ora di transito a
+    ciascuna stazione: sono le ancore fra cui il motore interpola.
+    """
+    slots = []
+    t = day.replace(hour=0, minute=0, second=0, microsecond=0)
+    while t.day == day.day:
+        slots.append(t.strftime("%a %b %d %Y %H:%M:%S GMT+0200").replace(" ", "%20"))
+        t += timedelta(minutes=SLOT_MIN)
+
+    jobs = [(st, slot, kind, field)
+            for st in stations
+            for slot in slots
+            for kind, field in (("partenze", "compOrarioPartenza"),
+                                ("arrivi", "compOrarioArrivo"))]
+    print(f"  {len(stations)} stazioni x {len(slots)} fasce = {len(jobs)} chiamate",
+          file=sys.stderr)
+
+    trains = {}
+    done = 0
+
+    def fetch(job):
+        st, slot, kind, field = job
+        return st, field, vt(f"/{kind}/{st['code']}/{slot}")
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        for st, field, rows in pool.map(fetch, jobs):
+            done += 1
+            if done % 400 == 0:
+                print(f"    [{done}/{len(jobs)}] {len(trains)} treni", file=sys.stderr)
+            for tr in rows:
+                num, when = tr.get("numeroTreno"), tr.get(field)
+                if not num or not when:
+                    continue
+                rec = trains.setdefault(num, {
+                    "n": num, "cat": tr.get("categoria", ""),
+                    "orig": tr.get("origine"), "dest": tr.get("destinazione"),
+                    "_stops": {},
+                })
+                # arrivi non porta la destinazione, partenze non porta l'origine
+                rec["orig"] = rec["orig"] or tr.get("origine")
+                rec["dest"] = rec["dest"] or tr.get("destinazione")
+                slot_st = rec["_stops"].setdefault(st["code"], {"s": st["code"],
+                                                               "a": None, "d": None})
+                slot_st["d" if field == "compOrarioPartenza" else "a"] = when
+
+    out = []
+    for rec in trains.values():
+        stops = sorted(rec.pop("_stops").values(),
+                       key=lambda x: x["d"] or x["a"] or "99:99")
+        if len(stops) >= 2:
+            rec["stops"] = stops
+            out.append(rec)
+    print(f"  {len(out)} treni sulla rete ({len(trains)-len(out)} con una sola "
+          f"fermata nota)", file=sys.stderr)
+    return out
 
 
 def scan_with_coverage(day, stations, graph, n_hubs, codes):

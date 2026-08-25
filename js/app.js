@@ -492,13 +492,12 @@ function renderHero() {
       <div class="nodata-note">
         <p><strong>Su questo passaggio a livello non posso dire nulla</strong>, e preferisco
         dirtelo invece di mostrarti una previsione inventata.</p>
-        <p>I dati dei treni vengono da ViaggiaTreno, il servizio di RFI. La linea che
-        attraversa qui è esercita su infrastruttura non RFI — a Bologna sono le linee
-        per Portomaggiore e Vignola e la tratta Bologna–Porretta — e i suoi treni non
-        compaiono lì, né in nessun altro dato aperto che sia riuscito a trovare:
-        TPER pubblica il GTFS degli autobus, non quello dei treni.</p>
-        <p class="fineprint">Il passaggio a livello resta in elenco perché esiste: se cambia
-        la disponibilità dei dati, si accende da solo.</p>
+        <p>Gli orari dei treni vengono da ViaggiaTreno, il servizio di RFI. Qui non
+        arrivano: o la linea è esercita da un altro gestore e i suoi treni non sono
+        pubblicati, oppure in questo periodo su questa tratta non ne circolano —
+        succede durante i lavori, quando il servizio è sostituito da autobus.</p>
+        <p class="fineprint">Il passaggio a livello resta in elenco perché esiste. Se i
+        dati compaiono, si accende da solo alla prossima notte.</p>
       </div>` : ""}
 
     ${noData ? "" : `

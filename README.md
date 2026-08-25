@@ -8,10 +8,22 @@ GitHub Pages così com'è.
 
 **Zone coperte**
 
-| Zona | Passaggi a livello | Treni |
-|---|---|---|
-| Locride e Ferrovia Jonica (Calabria) | 39 su 40 con previsione | 154 |
-| Bologna e provincia (Emilia-Romagna) | 6 su 51 con previsione | 279 |
+<!-- zone:inizio -->
+| Zona | Regione | Passaggi a livello | Treni | Peso |
+|---|---|---|---|---|
+| Locride e Ferrovia Jonica | Calabria | tutti e 40 | 111 | 77 KB |
+| Bologna e provincia | Emilia-Romagna | **21 su 51** con previsione | 167 | 59 KB |
+| Ferrara e provincia | Emilia-Romagna | **38 su 104** con previsione | 76 | 42 KB |
+| Forlì-Cesena e provincia | Emilia-Romagna | tutti e 3 | 40 | 25 KB |
+| Modena e provincia | Emilia-Romagna | **25 su 31** con previsione | 58 | 23 KB |
+| Parma e provincia | Emilia-Romagna | tutti e 44 | 89 | 46 KB |
+| Piacenza e provincia | Emilia-Romagna | tutti e 32 | 38 | 18 KB |
+| Ravenna e provincia | Emilia-Romagna | **89 su 114** con previsione | 106 | 66 KB |
+| Reggio Emilia e provincia | Emilia-Romagna | **46 su 93** con previsione | 69 | 39 KB |
+| Rimini e provincia | Emilia-Romagna | **8 su 9** con previsione | 38 | 17 KB |
+
+In totale **346 passaggi a livello con previsione** su 521 censiti, in 10 zone.
+<!-- zone:fine -->
 
 I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
 scaricare quelli di Bologna. Aggiungere una zona è una voce in
@@ -82,29 +94,52 @@ cinque minuti. Per chi è in auto quello è un unico sbarramento, non due.
 
 ---
 
-## Il limite dei dati, e perché Bologna è coperta poco
+## Un tranello di ViaggiaTreno che vale la pena conoscere
+
+`dettaglioStazione` vuole due parametri: il codice della stazione e **l'indice
+di regione**. Passandone uno sbagliato il servizio non risponde con un errore:
+risponde con `lat: 0.0`, coordinate che sembrano valide e non lo sono.
+
+Costava caro. La verifica sulle coordinate scartava in silenzio tutte le
+stazioni fuori dalla regione che avevo cablato, e con esse linee intere: la
+Bologna–Portomaggiore risultava «senza dati» pur avendo i treni pubblicati.
+Sistemarlo — leggendo l'indice giusto da `/regione/<codice>` — ha portato
+Bologna da 6 a 21 passaggi a livello con previsione.
+
+Alcune stazioni le coordinate non le hanno affatto, e sono proprio quelle delle
+linee di gestori diversi da RFI. Per quelle si ripiega sul nome identico, ma
+solo se la ricerca restituisce **un unico** candidato con quel nome: con un
+omonimo l'abbinamento sarebbe un terno al lotto, e allora è meglio rinunciare.
+
+---
+
+## Il limite dei dati
 
 L'app dipende da ViaggiaTreno, che è il sistema di **RFI**. Le linee esercite su
-infrastruttura di altri gestori non ci sono, e a Bologna sono proprio quelle
-con più passaggi a livello:
+infrastruttura di altri gestori spesso non ci sono, e in Emilia-Romagna sono
+proprio quelle con più passaggi a livello: la rete FER attorno a Reggio Emilia,
+la Ferrara–Codigoro, la Bologna–Vignola.
 
-- Bologna–Portomaggiore e Bologna–Vignola (infrastruttura FER);
-- la tratta Bologna–Porretta: i treni per Porretta che ViaggiaTreno pubblica
-  arrivano da Pistoia, quelli da Bologna no.
+Non tutte però mancano. La **Bologna–Portomaggiore** ha i treni pubblicati da
+Budrio in poi, e la copertura di intere province — Piacenza, Parma, Ravenna —
+è quasi completa. La Bologna–Vignola in questo periodo è sostituita da autobus
+per lavori: lì «nessun dato» e «nessun treno» coincidono davvero.
 
-Risultato: dei 51 passaggi a livello della provincia, **6 hanno una previsione e
-45 no**. Le linee RFI del nodo bolognese, per contro, sono in gran parte a
-livelli sfalsati e di passaggi a livello ne hanno pochi.
+Vale la pena notare dove i passaggi a livello *non* ci sono: Bologna città e la
+Modena–Bologna sono in gran parte a livelli sfalsati, e su quelle linee di
+passaggi a livello ne restano pochi. Forlì-Cesena, in tutta la provincia, ne ha
+nove mappati su OpenStreetMap.
 
-Ho cercato una seconda fonte: TPER pubblica in open data il GTFS degli
-**autobus**, non quello dei treni, e non ho trovato un GTFS ferroviario aperto
-per quelle linee.
+Ho cercato una seconda fonte per le linee mancanti: TPER pubblica in open data
+il GTFS degli **autobus**, non quello dei treni, e non ho trovato un GTFS
+ferroviario aperto. Restano i PDF degli orari, trascrivibili a mano nel formato
+dell'app se un giorno servisse.
 
-**Quei passaggi a livello restano comunque in elenco**, segnati come «dati non
-disponibili» e grigi sulla mappa. Farli sparire sarebbe stata la scelta comoda e
-quella sbagliata: chi apre l'app davanti a uno di essi deve leggere *«non lo
-so»*, non trovare il nulla e concluderne che la zona sia coperta. Se un giorno
-i dati compariranno, si accendono da soli.
+**I passaggi a livello scoperti restano comunque in elenco**, segnati come
+«dati non disponibili» e grigi sulla mappa. Farli sparire sarebbe stata la
+scelta comoda e quella sbagliata: chi apre l'app davanti a uno di essi deve
+leggere *«non lo so»*, non trovare il nulla e concluderne che la zona sia
+coperta. Se un giorno i dati compariranno, si accendono da soli.
 
 ---
 
@@ -189,14 +224,29 @@ uno vecchio. Se una zona fallisce, le altre si aggiornano comunque.
 A mano:
 
 ```bash
-python3 tools/build_area.py jonica              # rigenera tutto (di notte)
+python3 tools/build_area.py jonica                 # di notte: via andamentoTreno
+python3 tools/build_area.py modena --day-offset 1  # di giorno: guarda a domani
 python3 tools/build_area.py bologna --cache-ways --keep-timetable
-node tools/test_predict.mjs jonica              # prova il motore senza rete
+node tools/test_predict.mjs jonica                 # prova il motore senza rete
 ```
 
-`--cache-ways` riusa i binari già scaricati, `--keep-timetable` riusa l'orario
-del file esistente: insieme rendono istantanea una rigenerazione in cui è
-cambiata solo la logica.
+`--cache-ways` riusa binari e nodi già scaricati, `--keep-timetable` riusa
+l'orario del file esistente: insieme rendono istantanea una rigenerazione in cui
+è cambiata solo la logica.
+
+**Due modi di leggere l'orario, per un vincolo di ViaggiaTreno.** Di notte
+(`--day-offset 0`) si usa `andamentoTreno`, che restituisce tutte le fermate di
+un treno in una chiamata sola: costa poco e non dipende da quante stazioni ci
+sono. Ma risponde solo per i treni con data di partenza odierna, quindi a
+giornata iniziata perderebbe tutti quelli già passati. Di giorno si guarda
+allora al domani (`--day-offset 1`) interrogando `partenze` e `arrivi` stazione
+per stazione: più costoso, ma funziona sempre. Lo script sceglie da sé in base
+all'offset.
+
+Overpass limita le richieste ravvicinate e su una serie di zone respinge: le
+interrogazioni ruotano fra **quattro istanze** e, se nessuna risponde, si
+ripiega sulla copia locale dei binari, che cambiano molto più lentamente degli
+orari.
 
 ---
 
@@ -256,7 +306,7 @@ sw.js                 cache offline
 vendor/leaflet/       Leaflet 1.9.4, incluso invece che da CDN
 data/aree.json        indice delle zone disponibili
 data/aree/<slug>.json stazioni, PL, tratte, orario e parametri di una zona
-tools/rete.py         grafo dei binari e abbinamento stazioni
+tools/rete.py         grafo dei binari, mirror Overpass, abbinamento stazioni
 tools/build_area.py   generatore di una zona
 tools/aree.json       definizione delle zone
 tools/test_predict.mjs prova del motore senza rete

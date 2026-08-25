@@ -18,7 +18,19 @@
 
 const BASE = "http://www.viaggiatreno.it/infomobilitamobile/resteasy/viaggiatreno";
 const PREF_KEY = "itrain.proxy";
-const TIMEOUT_MS = 12000;
+const TIMEOUT_MS = 9000;
+
+/**
+ * Per quanto tempo si evita un proxy che ha appena fallito.
+ *
+ * Senza questa memoria ogni richiesta ripercorre la catena da capo: con
+ * quattro richieste lanciate insieme, e due proxy su quattro fuori servizio,
+ * si arrivava a superare i due minuti prima di mostrare qualcosa. Bastano
+ * pochi secondi di quarantena perche' le richieste parallele convergano
+ * subito su quello che funziona.
+ */
+const COOLDOWN_MS = 60000;
+const failedUntil = new Map();
 
 /**
  * I proxy in ordine di preferenza iniziale.
@@ -57,7 +69,11 @@ const PROXIES = [
   },
 ];
 
-/** Ordine di tentativo, con in testa l'ultimo proxy che ha funzionato. */
+/**
+ * Ordine di tentativo: prima l'ultimo proxy che ha funzionato, poi gli altri,
+ * saltando quelli in quarantena. Se sono tutti in quarantena si riprova
+ * comunque: meglio un tentativo lento che nessun dato.
+ */
 function order() {
   let preferred = null;
   try {
@@ -65,8 +81,11 @@ function order() {
   } catch {
     /* storage non disponibile: si usa l'ordine di default */
   }
-  const head = PROXIES.filter((p) => p.id === preferred);
-  return [...head, ...PROXIES.filter((p) => p.id !== preferred)];
+  const now = Date.now();
+  const sorted = [...PROXIES.filter((p) => p.id === preferred),
+                  ...PROXIES.filter((p) => p.id !== preferred)];
+  const fresh = sorted.filter((p) => (failedUntil.get(p.id) ?? 0) < now);
+  return fresh.length ? fresh : sorted;
 }
 
 function remember(id) {
@@ -114,6 +133,7 @@ export async function api(path) {
   for (const proxy of order()) {
     try {
       const data = await fetchThrough(proxy, url);
+      failedUntil.delete(proxy.id);
       remember(proxy.id);
       Object.assign(status, {
         proxy: proxy.label, ok: true,
@@ -121,6 +141,7 @@ export async function api(path) {
       });
       return data;
     } catch (err) {
+      failedUntil.set(proxy.id, Date.now() + COOLDOWN_MS);
       errors.push(`${proxy.label}: ${err.message}`);
     }
   }

@@ -29,13 +29,26 @@ concurrency:
 jobs:
   zone:
     runs-on: ubuntu-latest
-    timeout-minutes: 110
+    timeout-minutes: 200
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # I binari cambiano molto piu' lentamente degli orari: riscaricarli ogni
+      # notte per dieci zone significherebbe venti interrogazioni pesanti a
+      # Overpass, che limita le richieste ravvicinate e finirebbe per
+      # respingerle. La chiave contiene l'anno e il mese, quindi la copia si
+      # rinnova da sola una volta al mese.
+      - name: Recupera la copia locale di binari e nodi
+        uses: actions/cache@v4
+        with:
+          path: tools/cache
+          key: osm-${{ hashFiles('tools/aree.json') }}-${{ github.run_id }}
+          restore-keys: |
+            osm-${{ hashFiles('tools/aree.json') }}-
 
       - name: Rigenera le zone
         run: |
@@ -46,7 +59,9 @@ jobs:
           for z in $zone; do
             echo "::group::$z"
             # Una zona che fallisce non deve impedire alle altre di aggiornarsi.
-            python3 tools/build_area.py "$z" || echo "zona $z non riuscita, proseguo"
+            python3 tools/build_area.py "$z" --cache-ways \
+              || echo "zona $z non riuscita, proseguo"
+            sleep 30    # respiro fra una zona e l'altra, per non farsi respingere
             echo "::endgroup::"
           done
 
@@ -82,7 +97,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- data/; then
+          if git diff --quiet -- data/ tools/cache; then
             echo "nessuna variazione"
             exit 0
           fi

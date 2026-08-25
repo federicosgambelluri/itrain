@@ -572,7 +572,10 @@ a { color: var(--accent); }
 
 .picker {
   width: min(520px, calc(100vw - 28px));
-  max-height: min(78vh, 700px);
+  max-height: min(80vh, 720px);
+  /* con una decina di zone l'elenco supera l'altezza della finestra */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--pad);
   border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--card); color: var(--text);
@@ -583,6 +586,12 @@ a { color: var(--accent); }
 .picker-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; margin-bottom: 14px;
+  /* resta visibile mentre si scorre un elenco lungo */
+  position: sticky; top: calc(var(--pad) * -1);
+  padding: var(--pad) 0 10px;
+  margin-top: calc(var(--pad) * -1);
+  background: var(--card);
+  z-index: 1;
 }
 .picker-head h2 { font-size: 1.05rem; }
 

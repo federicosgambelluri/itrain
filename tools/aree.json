@@ -11,7 +11,76 @@
     "slug": "jonica",
     "name": "Locride e Ferrovia Jonica",
     "region": "Calabria",
-    "bbox": [37.90, 15.55, 38.95, 16.85],
+    "bbox": [
+      37.9,
+      15.55,
+      38.95,
+      16.85
+    ],
     "hubs": 5
+  },
+  {
+    "slug": "piacenza",
+    "name": "Piacenza e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Piacenza",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "parma",
+    "name": "Parma e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Parma",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "reggio-emilia",
+    "name": "Reggio Emilia e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Reggio nell'Emilia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "modena",
+    "name": "Modena e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Modena",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "ferrara",
+    "name": "Ferrara e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Ferrara",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "ravenna",
+    "name": "Ravenna e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Ravenna",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "forli-cesena",
+    "name": "Forlì-Cesena e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Forlì-Cesena",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "rimini",
+    "name": "Rimini e provincia",
+    "region": "Emilia-Romagna",
+    "osm_area": "Rimini",
+    "admin_level": "6",
+    "hubs": 8
   }
 ]
