@@ -235,5 +235,629 @@
     "osm_area": "La Spezia",
     "admin_level": "6",
     "hubs": 8
+  },
+  {
+    "slug": "l-aquila",
+    "name": "L'Aquila e provincia",
+    "region": "Abruzzo",
+    "osm_area": "L'Aquila",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "teramo",
+    "name": "Teramo e provincia",
+    "region": "Abruzzo",
+    "osm_area": "Teramo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "pescara",
+    "name": "Pescara e provincia",
+    "region": "Abruzzo",
+    "osm_area": "Pescara",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "chieti",
+    "name": "Chieti e provincia",
+    "region": "Abruzzo",
+    "osm_area": "Chieti",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "potenza",
+    "name": "Potenza e provincia",
+    "region": "Basilicata",
+    "osm_area": "Potenza",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "matera",
+    "name": "Matera e provincia",
+    "region": "Basilicata",
+    "osm_area": "Matera",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "napoli",
+    "name": "Napoli e provincia",
+    "region": "Campania",
+    "osm_area": "Napoli",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "salerno",
+    "name": "Salerno e provincia",
+    "region": "Campania",
+    "osm_area": "Salerno",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "caserta",
+    "name": "Caserta e provincia",
+    "region": "Campania",
+    "osm_area": "Caserta",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "avellino",
+    "name": "Avellino e provincia",
+    "region": "Campania",
+    "osm_area": "Avellino",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "benevento",
+    "name": "Benevento e provincia",
+    "region": "Campania",
+    "osm_area": "Benevento",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "roma",
+    "name": "Roma e provincia",
+    "region": "Lazio",
+    "osm_area": "Roma Capitale",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "latina",
+    "name": "Latina e provincia",
+    "region": "Lazio",
+    "osm_area": "Latina",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "frosinone",
+    "name": "Frosinone e provincia",
+    "region": "Lazio",
+    "osm_area": "Frosinone",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "viterbo",
+    "name": "Viterbo e provincia",
+    "region": "Lazio",
+    "osm_area": "Viterbo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "rieti",
+    "name": "Rieti e provincia",
+    "region": "Lazio",
+    "osm_area": "Rieti",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "milano",
+    "name": "Milano e provincia",
+    "region": "Lombardia",
+    "osm_area": "Milano",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "bergamo",
+    "name": "Bergamo e provincia",
+    "region": "Lombardia",
+    "osm_area": "Bergamo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "brescia",
+    "name": "Brescia e provincia",
+    "region": "Lombardia",
+    "osm_area": "Brescia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "como",
+    "name": "Como e provincia",
+    "region": "Lombardia",
+    "osm_area": "Como",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "cremona",
+    "name": "Cremona e provincia",
+    "region": "Lombardia",
+    "osm_area": "Cremona",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "lecco",
+    "name": "Lecco e provincia",
+    "region": "Lombardia",
+    "osm_area": "Lecco",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "lodi",
+    "name": "Lodi e provincia",
+    "region": "Lombardia",
+    "osm_area": "Lodi",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "mantova",
+    "name": "Mantova e provincia",
+    "region": "Lombardia",
+    "osm_area": "Mantova",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "monza-e-brianza",
+    "name": "Monza e Brianza e provincia",
+    "region": "Lombardia",
+    "osm_area": "Monza e della Brianza",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "pavia",
+    "name": "Pavia e provincia",
+    "region": "Lombardia",
+    "osm_area": "Pavia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "sondrio",
+    "name": "Sondrio e provincia",
+    "region": "Lombardia",
+    "osm_area": "Sondrio",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "varese",
+    "name": "Varese e provincia",
+    "region": "Lombardia",
+    "osm_area": "Varese",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "ancona",
+    "name": "Ancona e provincia",
+    "region": "Marche",
+    "osm_area": "Ancona",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "ascoli-piceno",
+    "name": "Ascoli Piceno e provincia",
+    "region": "Marche",
+    "osm_area": "Ascoli Piceno",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "fermo",
+    "name": "Fermo e provincia",
+    "region": "Marche",
+    "osm_area": "Fermo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "macerata",
+    "name": "Macerata e provincia",
+    "region": "Marche",
+    "osm_area": "Macerata",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "pesaro-e-urbino",
+    "name": "Pesaro e Urbino e provincia",
+    "region": "Marche",
+    "osm_area": "Pesaro e Urbino",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "torino",
+    "name": "Torino e provincia",
+    "region": "Piemonte",
+    "osm_area": "Torino",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "alessandria",
+    "name": "Alessandria e provincia",
+    "region": "Piemonte",
+    "osm_area": "Alessandria",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "asti",
+    "name": "Asti e provincia",
+    "region": "Piemonte",
+    "osm_area": "Asti",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "biella",
+    "name": "Biella e provincia",
+    "region": "Piemonte",
+    "osm_area": "Biella",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "cuneo",
+    "name": "Cuneo e provincia",
+    "region": "Piemonte",
+    "osm_area": "Cuneo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "novara",
+    "name": "Novara e provincia",
+    "region": "Piemonte",
+    "osm_area": "Novara",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "verbano-cusio-ossola",
+    "name": "Verbano-Cusio-Ossola e provincia",
+    "region": "Piemonte",
+    "osm_area": "Verbano-Cusio-Ossola",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "vercelli",
+    "name": "Vercelli e provincia",
+    "region": "Piemonte",
+    "osm_area": "Vercelli",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "bari",
+    "name": "Bari e provincia",
+    "region": "Puglia",
+    "osm_area": "Bari",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "barletta-andria-trani",
+    "name": "Barletta-Andria-Trani e provincia",
+    "region": "Puglia",
+    "osm_area": "Barletta-Andria-Trani",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "brindisi",
+    "name": "Brindisi e provincia",
+    "region": "Puglia",
+    "osm_area": "Brindisi",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "foggia",
+    "name": "Foggia e provincia",
+    "region": "Puglia",
+    "osm_area": "Foggia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "lecce",
+    "name": "Lecce e provincia",
+    "region": "Puglia",
+    "osm_area": "Lecce",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "taranto",
+    "name": "Taranto e provincia",
+    "region": "Puglia",
+    "osm_area": "Taranto",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "cagliari",
+    "name": "Cagliari e provincia",
+    "region": "Sardegna",
+    "osm_area": "Casteddu/Cagliari",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "nuoro",
+    "name": "Nuoro e provincia",
+    "region": "Sardegna",
+    "osm_area": "Nuoro",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "oristano",
+    "name": "Oristano e provincia",
+    "region": "Sardegna",
+    "osm_area": "Aristanis/Oristano",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "sassari",
+    "name": "Sassari e provincia",
+    "region": "Sardegna",
+    "osm_area": "Tàttari/Sassari",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "sud-sardegna",
+    "name": "Sud Sardegna e provincia",
+    "region": "Sardegna",
+    "osm_area": "Sulcis Iglesiente",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "firenze",
+    "name": "Firenze e provincia",
+    "region": "Toscana",
+    "osm_area": "Firenze",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "arezzo",
+    "name": "Arezzo e provincia",
+    "region": "Toscana",
+    "osm_area": "Arezzo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "grosseto",
+    "name": "Grosseto e provincia",
+    "region": "Toscana",
+    "osm_area": "Grosseto",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "livorno",
+    "name": "Livorno e provincia",
+    "region": "Toscana",
+    "osm_area": "Livorno",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "lucca",
+    "name": "Lucca e provincia",
+    "region": "Toscana",
+    "osm_area": "Lucca",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "massa-carrara",
+    "name": "Massa-Carrara e provincia",
+    "region": "Toscana",
+    "osm_area": "Massa-Carrara",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "pisa",
+    "name": "Pisa e provincia",
+    "region": "Toscana",
+    "osm_area": "Pisa",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "prato",
+    "name": "Prato e provincia",
+    "region": "Toscana",
+    "osm_area": "Prato",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "siena",
+    "name": "Siena e provincia",
+    "region": "Toscana",
+    "osm_area": "Siena",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "pistoia",
+    "name": "Pistoia e provincia",
+    "region": "Toscana",
+    "osm_area": "Pistoia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "trento",
+    "name": "Trento e provincia",
+    "region": "Trentino-Alto Adige",
+    "osm_area": "Provincia di Trento",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "bolzano",
+    "name": "Bolzano e provincia",
+    "region": "Trentino-Alto Adige",
+    "osm_area": "Bolzano - Bozen",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "perugia",
+    "name": "Perugia e provincia",
+    "region": "Umbria",
+    "osm_area": "Perugia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "terni",
+    "name": "Terni e provincia",
+    "region": "Umbria",
+    "osm_area": "Terni",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "belluno",
+    "name": "Belluno e provincia",
+    "region": "Veneto",
+    "osm_area": "Belluno",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "padova",
+    "name": "Padova e provincia",
+    "region": "Veneto",
+    "osm_area": "Padova",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "rovigo",
+    "name": "Rovigo e provincia",
+    "region": "Veneto",
+    "osm_area": "Rovigo",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "treviso",
+    "name": "Treviso e provincia",
+    "region": "Veneto",
+    "osm_area": "Treviso",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "venezia",
+    "name": "Venezia e provincia",
+    "region": "Veneto",
+    "osm_area": "Venezia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "verona",
+    "name": "Verona e provincia",
+    "region": "Veneto",
+    "osm_area": "Verona",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "vicenza",
+    "name": "Vicenza e provincia",
+    "region": "Veneto",
+    "osm_area": "Vicenza",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "gorizia",
+    "name": "Gorizia e provincia",
+    "region": "Friuli-Venezia Giulia",
+    "osm_area": "Gorizia",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "pordenone",
+    "name": "Pordenone e provincia",
+    "region": "Friuli-Venezia Giulia",
+    "osm_area": "Pordenone",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "trieste",
+    "name": "Trieste e provincia",
+    "region": "Friuli-Venezia Giulia",
+    "osm_area": "Trieste",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "udine",
+    "name": "Udine e provincia",
+    "region": "Friuli-Venezia Giulia",
+    "osm_area": "Udine",
+    "admin_level": "6",
+    "hubs": 8
+  },
+  {
+    "slug": "valle-aosta",
+    "name": "Valle d'Aosta",
+    "region": "Valle d'Aosta",
+    "osm_area": "Valle d'Aosta / Vallée d'Aoste",
+    "admin_level": "4",
+    "hubs": 6
   }
 ]
