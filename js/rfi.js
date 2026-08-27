@@ -9,11 +9,21 @@
  * l'header mancante.
  *
  * Qui si usano solo proxy pubblici, per scelta: niente da configurare, niente
- * account. Il prezzo e' che nessuno di essi e' affidabile da solo. Misurato sul
- * campo, allorigins risponde circa una volta su tre. La contromisura e' una
- * catena: si prova un proxy dopo l'altro, si ricorda quale ha funzionato per
- * partire da quello la volta dopo, e se cadono tutti l'app ripiega
+ * account. Il prezzo e' che nessuno di essi e' affidabile da solo, e non lo e'
+ * in modo stabile: misurando a due minuti di distanza, r.jina.ai e' passato da
+ * bloccato a tre risposte su tre, mentre allorigins ha fatto il percorso
+ * inverso. Non c'e' un "migliore" da scegliere una volta per tutte.
+ *
+ * La contromisura e' quindi una catena: si prova un proxy dopo l'altro, si
+ * ricorda quale ha funzionato per partire da quello la volta dopo, si mette in
+ * quarantena per un minuto quello che fallisce, e se cadono tutti l'app ripiega
  * sull'orario statico avvisando l'utente.
+ *
+ * Un ponte proprio su Cloudflare Workers e' stato costruito e provato (il
+ * codice e' in worker/), ma non funziona: ViaggiaTreno sta dietro Akamai, che
+ * rifiuta le richieste in arrivo dalle reti dei Worker. Verificato due volte,
+ * con e senza header da browser. Il problema e' l'indirizzo IP di partenza, e
+ * da li' non si aggira.
  */
 
 import { PROXY_URL } from "./config.js";
@@ -77,6 +87,12 @@ const PUBBLICI = [
     label: "allorigins (get)",
     wrap: (url) => "https://api.allorigins.win/get?url=" + encodeURIComponent(url),
     unwrap: (text) => JSON.parse(JSON.parse(text).contents),
+  },
+  {
+    id: "corssh",
+    label: "cors.sh",
+    wrap: (url) => "https://proxy.cors.sh/" + url,
+    unwrap: (text) => JSON.parse(text),
   },
   {
     id: "codetabs",

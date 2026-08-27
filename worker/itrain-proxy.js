@@ -1,6 +1,22 @@
 /**
  * iTrain — ponte verso ViaggiaTreno.
  *
+ * ATTENZIONE: PROVATO SUL CAMPO, NON FUNZIONA CON VIAGGIATRENO.
+ *
+ * Il Worker in se' e' corretto e fa il suo mestiere, ma ViaggiaTreno sta
+ * dietro Akamai, che rifiuta le richieste in arrivo dalle reti Cloudflare
+ * Workers rispondendo "Access Denied". Verificato due volte, prima con uno
+ * User-Agent dichiarato e poi con un insieme completo di header da browser
+ * (compreso il Referer sul sito stesso): nessuna differenza.
+ *
+ * Che non fosse questione di come ci si presenta lo dimostra una prova
+ * fatta da un indirizzo residenziale, dove la stessa chiamata passa con
+ * qualsiasi User-Agent, perfino vuoto. Il filtro guarda da dove arrivi.
+ *
+ * Il file resta qui perche' la conoscenza vale: chi provasse la stessa strada
+ * saprebbe subito che porta a un muro, e perche' su un'altra API senza CORS
+ * questo codice funzionerebbe cosi' com'e'.
+ *
  * ViaggiaTreno non manda l'header Access-Control-Allow-Origin, quindi il
  * browser scarica la risposta e poi si rifiuta di consegnarla al codice della
  * pagina. Non e' un blocco di RFI: e' una regola del browser, uguale per tutti
@@ -15,6 +31,13 @@
  * API che servono. Un proxy che rigira qualsiasi URL diventa in fretta uno
  * strumento per mascherare traffico altrui: verrebbe abusato, e Cloudflare lo
  * spegnerebbe. Il controllo qui sotto e' cio' che tiene il servizio tuo.
+ *
+ * ViaggiaTreno sta dietro Akamai, che filtra i bot. Da un indirizzo
+ * residenziale lascia passare qualsiasi cosa -- provato: anche User-Agent
+ * vuoto -- ma da una rete datacenter come quella dei Worker guarda l'insieme
+ * degli header. Per questo la richiesta qui sotto si presenta come un browser
+ * vero, con Referer sul sito stesso: non e' un trucco, e' il modo in cui
+ * quelle API vengono chiamate normalmente.
  *
  * Uso:  https://<tuo-worker>.workers.dev/?u=<URL ViaggiaTreno codificato>
  */
@@ -73,8 +96,11 @@ export default {
     try {
       risposta = await fetch(target.toString(), {
         headers: {
-          Accept: "application/json",
-          "User-Agent": "iTrain (https://github.com/federicosgambelluri/itrain)",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "it-IT,it;q=0.9,en;q=0.8",
+          Referer: "http://www.viaggiatreno.it/infomobilita/index.jsp",
         },
         cf: { cacheTtl: CACHE_SECONDI, cacheEverything: true },
       });
@@ -86,6 +112,16 @@ export default {
     // quella fascia oraria: e' un esito legittimo, non un errore, e va
     // passato cosi' com'e'.
     const corpo = await risposta.text();
+
+    // Akamai, che protegge ViaggiaTreno, risponde con una pagina HTML quando
+    // decide di bloccare. Riconoscerla e dirlo chiaramente evita di far
+    // arrivare all'app dell'HTML dove si aspetta JSON.
+    if (corpo.trimStart().startsWith("<")) {
+      return errore(
+        "ViaggiaTreno ha rifiutato la richiesta del ponte (filtro anti-bot). " +
+        "Riprova piu' tardi o usa i proxy pubblici.", 502);
+    }
+
     return new Response(corpo, {
       status: risposta.ok ? 200 : risposta.status,
       headers: intestazioni({

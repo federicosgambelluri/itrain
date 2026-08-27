@@ -220,13 +220,32 @@ I proxy pubblici non sono equivalenti fra loro, e conviene sapere cosa sono:
 |---|---|---|
 | `r.jina.ai` | il *Reader* di Jina AI, che trasforma pagine in testo per i modelli linguistici | **no**, lo usiamo di sbieco |
 | `allorigins` | un proxy CORS open source, servizio gratuito alla comunità | sì |
+| `cors.sh` | un proxy CORS, servizio gratuito con limiti | sì |
 | `codetabs` | un sito di piccole utilità gratuite | sì, ma in piccolo |
 
-In tutti e tre si è ospiti: nessuno sa che esistiamo, nessuno deve niente, e
-quello che regge meglio è proprio quello usato fuori dal suo scopo — si vede
-dall'involucro markdown che restituisce e che il codice deve scartare.
+In tutti si è ospiti: nessuno sa che esistiamo, nessuno deve niente. E non c'è
+un "migliore" da scegliere una volta per tutte: misurando a due minuti di
+distanza, `r.jina.ai` è passato da bloccato a tre risposte su tre, mentre
+`allorigins` ha fatto il percorso inverso. È per questo che la catena ne ha
+cinque e mette in quarantena chi fallisce, invece di puntare su uno solo.
 
-Per questo c'è `worker/itrain-proxy.js`: lo stesso ponte, ma tuo.
+### Un ponte proprio: provato, non funziona
+
+`worker/itrain-proxy.js` è lo stesso ponte, ma proprio, da pubblicare su
+Cloudflare Workers. **È stato costruito, pubblicato e provato: con ViaggiaTreno
+non funziona.**
+
+ViaggiaTreno sta dietro Akamai, che rifiuta le richieste in arrivo dalle reti
+dei Worker con un "Access Denied". Verificato due volte, prima con uno
+User-Agent dichiarato e poi con un insieme completo di header da browser,
+Referer compreso: nessuna differenza. Che non sia questione di *come* ci si
+presenta lo dimostra la prova opposta — da un indirizzo residenziale la stessa
+chiamata passa con qualsiasi User-Agent, perfino vuoto. Il filtro guarda **da
+dove** arrivi, e quello su Cloudflare non si cambia.
+
+Il codice resta nel repository perché la conoscenza vale, e perché su un'altra
+API senza CORS funzionerebbe così com'è. Le istruzioni sotto valgono in quel
+caso.
 
 1. Registrati su [dash.cloudflare.com](https://dash.cloudflare.com) — gratis,
    senza carta di credito.
