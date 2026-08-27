@@ -313,7 +313,9 @@ def build_segments(trains, stations, xings, graph):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("slug")
-    ap.add_argument("--day-offset", type=int, default=0)
+    ap.add_argument("--day-offset", type=int, default=None,
+                    help="0 = oggi (solo di notte), 1 = domani. "
+                         "Se omesso viene scelto in base all'ora.")
     ap.add_argument("--cache-ways", action="store_true",
                     help="riusa i binari gia' scaricati invece di riscaricarli")
     ap.add_argument("--keep-timetable", action="store_true",

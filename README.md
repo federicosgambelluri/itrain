@@ -33,8 +33,8 @@ amministrativo.
 | Genova e provincia | Liguria | tutti e 9 | 170 | 117 KB |
 | La Spezia e provincia | Liguria | **0 su 1** con previsione | 0 | 1 KB |
 | Savona e provincia | Liguria | tutti e 30 | 108 | 53 KB |
-| Campobasso e provincia | Molise | **2 su 59** con previsione | 2 | 9 KB |
-| Isernia e provincia | Molise | **15 su 24** con previsione | 4 | 5 KB |
+| Campobasso e provincia | Molise | **2 su 59** con previsione | 8 | 10 KB |
+| Isernia e provincia | Molise | **15 su 24** con previsione | 24 | 10 KB |
 | Agrigento e provincia | Sicilia | **17 su 49** con previsione | 6 | 9 KB |
 | Caltanissetta e provincia | Sicilia | **11 su 24** con previsione | 33 | 13 KB |
 | Catania e provincia | Sicilia | **32 su 36** con previsione | 95 | 42 KB |

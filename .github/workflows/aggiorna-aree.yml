@@ -140,22 +140,57 @@ jobs:
       - name: Controlla che i file siano sensati
         run: |
           python3 - <<'PY'
-          import json, sys
+          import json, subprocess, sys
+
+          def versione_committata(percorso):
+              """Il file com'era prima di questa esecuzione, per confronto."""
+              try:
+                  return json.loads(subprocess.run(
+                      ["git", "show", f"HEAD:{percorso}"],
+                      capture_output=True, text=True, check=True).stdout)
+              except Exception:
+                  return None
+
           index = json.load(open("data/aree.json"))
           if not index["areas"]:
               sys.exit("nessuna zona nell'indice")
+
           problemi = []
           for meta in index["areas"]:
-              d = json.load(open(f"data/aree/{meta['slug']}.json"))
+              percorso = f"data/aree/{meta['slug']}.json"
+              d = json.load(open(percorso))
               n_t, n_x, n_s = len(d["trains"]), len(d["crossings"]), len(d["segments"])
+              prima = versione_committata(percorso)
+              nota = ""
+              if prima:
+                  nota = f" (prima: {len(prima['trains'])} treni, {prima['covered']} coperti)"
               print(f"{meta['slug']}: {n_t} treni, {n_x} PL "
-                    f"({meta['covered']} con previsione), {n_s} tratte")
+                    f"({meta['covered']} con previsione), {n_s} tratte{nota}")
+
               # Un file svuotato o troncato e' peggio di uno vecchio.
               if n_x < 1:
                   problemi.append(f"{meta['slug']}: nessun passaggio a livello")
               codes = [s["code"] for s in d["stations"]]
               if len(codes) != len(set(codes)):
                   problemi.append(f"{meta['slug']}: codici stazione duplicati")
+
+              # Un aggiornamento che dimezza i dati e' quasi sempre una
+              # scansione andata male, non un cambio d'orario. E' successo:
+              # una esecuzione partita nel pomeriggio ha portato Isernia da
+              # ventiquattro treni a quattro, e nessun controllo se n'e'
+              # accorto. Meglio tenere il file vecchio e fallire rumorosamente.
+              if prima and prima["trains"]:
+                  calo_treni = 1 - n_t / len(prima["trains"])
+                  calo_pl = 1 - meta["covered"] / max(prima["covered"], 1)
+                  if calo_treni > 0.5:
+                      problemi.append(
+                          f"{meta['slug']}: i treni sono passati da "
+                          f"{len(prima['trains'])} a {n_t}")
+                  if calo_pl > 0.5:
+                      problemi.append(
+                          f"{meta['slug']}: i PL con previsione sono passati da "
+                          f"{prima['covered']} a {meta['covered']}")
+
           if problemi:
               sys.exit("\n".join(problemi))
           PY
