@@ -16,6 +16,8 @@
  * sull'orario statico avvisando l'utente.
  */
 
+import { PROXY_URL } from "./config.js";
+
 const BASE = "http://www.viaggiatreno.it/infomobilitamobile/resteasy/viaggiatreno";
 const PREF_KEY = "itrain.proxy";
 const TIMEOUT_MS = 9000;
@@ -33,10 +35,25 @@ const COOLDOWN_MS = 60000;
 const failedUntil = new Map();
 
 /**
- * I proxy in ordine di preferenza iniziale.
+ * Il ponte personale, se ne e' stato configurato uno in config.js.
+ *
+ * Sta in testa alla catena ma non la sostituisce: se un giorno non rispondesse,
+ * la quarantena lo scarta e si passa ai proxy pubblici come prima. Con
+ * PROXY_URL vuoto non entra proprio nell'elenco, e l'app si comporta
+ * esattamente come se non esistesse.
+ */
+const PROPRIO = PROXY_URL ? [{
+  id: "proprio",
+  label: "il tuo ponte",
+  wrap: (url) => PROXY_URL.replace(/\/+$/, "") + "/?u=" + encodeURIComponent(url),
+  unwrap: (text) => JSON.parse(text),
+}] : [];
+
+/**
+ * I proxy pubblici, in ordine di preferenza iniziale.
  * `wrap` costruisce l'URL, `unwrap` riporta la risposta a JSON.
  */
-const PROXIES = [
+const PUBBLICI = [
   {
     id: "jina",
     label: "r.jina.ai",
@@ -69,6 +86,11 @@ const PROXIES = [
   },
 ];
 
+const PROXIES = [...PROPRIO, ...PUBBLICI];
+
+/** Vero se e' configurato un ponte personale. */
+export const hasOwnProxy = PROPRIO.length > 0;
+
 /**
  * Ordine di tentativo: prima l'ultimo proxy che ha funzionato, poi gli altri,
  * saltando quelli in quarantena. Se sono tutti in quarantena si riprova
@@ -82,8 +104,11 @@ function order() {
     /* storage non disponibile: si usa l'ordine di default */
   }
   const now = Date.now();
-  const sorted = [...PROXIES.filter((p) => p.id === preferred),
-                  ...PROXIES.filter((p) => p.id !== preferred)];
+  // Il ponte personale resta comunque il primo tentativo: e' l'unico su cui
+  // abbiamo garanzie, e la memoria del proxy pubblico non deve scavalcarlo.
+  const sorted = [...PROPRIO,
+                  ...PUBBLICI.filter((p) => p.id === preferred),
+                  ...PUBBLICI.filter((p) => p.id !== preferred)];
   const fresh = sorted.filter((p) => (failedUntil.get(p.id) ?? 0) < now);
   return fresh.length ? fresh : sorted;
 }

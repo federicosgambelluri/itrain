@@ -6,7 +6,7 @@
  * cache: un ritardo di dieci minuti fa non serve a nessuno.
  */
 
-const VERSION = "itrain-v3";   // cambiata con il passaggio alle zone e alla mappa
+const VERSION = "itrain-v4";   // cambiata con il passaggio alle zone e alla mappa
 
 // Il guscio dell'app: piccolo, stabile, si mette in cache all'installazione.
 // I dati delle zone no: sono grandi e sono molti, e scaricarli tutti per
@@ -21,6 +21,7 @@ const SHELL = [
   "js/predict.js",
   "js/trains.js",
   "js/rfi.js",
+  "js/config.js",
   "js/geo.js",
   "js/calibration.js",
   "js/notify.js",

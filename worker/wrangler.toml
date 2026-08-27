@@ -1,0 +1,13 @@
+# Configurazione per chi preferisce la riga di comando invece del pannello web.
+#
+#   npm install -g wrangler
+#   cd worker && wrangler login && wrangler deploy
+#
+# Dal pannello di Cloudflare non serve: si incolla itrain-proxy.js e basta.
+
+name = "itrain-proxy"
+main = "itrain-proxy.js"
+compatibility_date = "2026-01-01"
+
+# Il Worker non ha bisogno di nulla: niente database, niente variabili,
+# niente segreti. Riceve una richiesta e la rigira.

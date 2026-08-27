@@ -212,8 +212,48 @@ sequenza, con memoria di quale ha funzionato per partire da quello la volta
 dopo. Se cadono tutti, l'app ripiega sull'orario statico del repo e lo dichiara
 in cima allo schermo, invece di mostrare orari sbagliati in silenzio.
 
-Se un giorno volessi più affidabilità, un Cloudflare Worker gratuito da quindici
-righe risolve la cosa: basta aggiungerlo in testa a `PROXIES`.
+### Il ponte personale
+
+I proxy pubblici non sono equivalenti fra loro, e conviene sapere cosa sono:
+
+| | Cos'è | Nato per questo? |
+|---|---|---|
+| `r.jina.ai` | il *Reader* di Jina AI, che trasforma pagine in testo per i modelli linguistici | **no**, lo usiamo di sbieco |
+| `allorigins` | un proxy CORS open source, servizio gratuito alla comunità | sì |
+| `codetabs` | un sito di piccole utilità gratuite | sì, ma in piccolo |
+
+In tutti e tre si è ospiti: nessuno sa che esistiamo, nessuno deve niente, e
+quello che regge meglio è proprio quello usato fuori dal suo scopo — si vede
+dall'involucro markdown che restituisce e che il codice deve scartare.
+
+Per questo c'è `worker/itrain-proxy.js`: lo stesso ponte, ma tuo.
+
+1. Registrati su [dash.cloudflare.com](https://dash.cloudflare.com) — gratis,
+   senza carta di credito.
+2. *Compute (Workers)* → **Create** → **Start from Hello World** → dai un nome,
+   per esempio `itrain-proxy`, e crea.
+3. **Edit code**: cancella tutto e incolla il contenuto di
+   `worker/itrain-proxy.js`. **Deploy**.
+4. Copia l'indirizzo che ti dà (`https://itrain-proxy.<tuonome>.workers.dev`) e
+   incollalo in `js/config.js`, poi committa.
+
+Chi preferisce la riga di comando trova `worker/wrangler.toml` già pronto:
+`npm i -g wrangler && cd worker && wrangler login && wrangler deploy`.
+
+**Non può rompere nulla.** Con `PROXY_URL` vuoto il ponte non entra nemmeno
+nell'elenco e l'app si comporta esattamente come prima. Configurato, diventa il
+primo tentativo, ma se un giorno non rispondesse la quarantena lo scarta e si
+scivola sui proxy pubblici senza che l'utente se ne accorga.
+
+Il Worker **non è un proxy aperto**: accetta solo destinazioni su
+`www.viaggiatreno.it` e solo sul percorso delle API. Un proxy che rigira
+qualsiasi indirizzo diventa in fretta uno strumento per mascherare traffico
+altrui, verrebbe abusato e Cloudflare lo spegnerebbe. Tiene inoltre in cache
+venti secondi: i ritardi cambiano al minuto, quindi non si mostrano dati
+vecchi, ma ViaggiaTreno viene interrogato molto meno.
+
+Il piano gratuito copre 100.000 richieste al giorno. Un uso normale dell'app ne
+fa qualche centinaio.
 
 ---
 
@@ -357,6 +397,8 @@ js/calibration.js     osservazioni sul campo, in localStorage
 js/notify.js          avvisi programmati
 js/theme.js           tema chiaro, scuro o automatico
 js/geo.js             distanze e geolocalizzazione
+js/config.js          l'unica cosa da configurare: il ponte personale
+worker/               il ponte verso ViaggiaTreno, da pubblicare su Cloudflare
 js/app.js             interfaccia e composizione
 sw.js                 cache offline
 vendor/leaflet/       Leaflet 1.9.4, incluso invece che da CDN
