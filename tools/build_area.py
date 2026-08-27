@@ -393,6 +393,22 @@ def main():
           f"({n_nome} abbinate sul solo nome, senza coordinate pubblicate), "
           f"{len(unmatched)+len(dropped)} escluse", file=sys.stderr)
 
+    # Quale giorno scansionare, se non e' stato imposto.
+    #
+    # Di notte conviene oggi: andamentoTreno restituisce tutte le fermate di un
+    # treno in una chiamata sola, ma solo per i treni con data di partenza
+    # odierna. A giornata iniziata quel metodo perde i treni gia' passati, e
+    # allora e' meglio guardare a domani con la scansione per stazione.
+    #
+    # La scelta non puo' essere fissa: il cron di GitHub non parte quando
+    # dovrebbe. Programmato all'01:30 UTC, e' partito alle 11:46, e con
+    # day-offset fisso a 0 avrebbe prodotto un orario mutilo.
+    if args.day_offset is None:
+        ora = datetime.now().hour
+        args.day_offset = 0 if ora < 5 else 1
+        print(f"  (sono le {ora}: scansiono "
+              f"{'oggi' if args.day_offset == 0 else 'domani'})", file=sys.stderr)
+
     day = datetime.now() + timedelta(days=args.day_offset)
     prev_path = f"{OUTDIR}/{area['slug']}.json"
     if args.keep_timetable and os.path.exists(prev_path):

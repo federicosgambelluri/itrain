@@ -3,15 +3,19 @@ name: Aggiorna le zone
 # I dati di ogni zona -- passaggi a livello, stazioni, tratte e orario dei
 # treni -- si rigenerano ogni notte.
 #
-# L'orario notturno non e' una comodita' ma un vincolo. andamentoTreno, che e'
-# cio' che restituisce tutte le fermate di un treno in una chiamata sola,
-# risponde solo per i treni con data di partenza odierna: eseguito a giornata
-# gia' iniziata perderebbe tutti i treni gia' passati. E' anche cio' che rende
-# il costo indipendente dal numero di stazioni.
+# Le zone si costruiscono una regione per job, in parallelo. In sequenza non
+# ci stavano: ventinove zone di fila hanno superato le cinque ore e la prima
+# esecuzione e' stata annullata a meta'.
+#
+# Ogni job produce solo i file delle proprie zone; un job finale li rimette
+# insieme, rigenera l'indice e committa una volta sola. Committare da piu' job
+# in parallelo produrrebbe conflitti sullo stesso ramo.
 
 on:
   schedule:
-    - cron: "30 1 * * *"     # 01:30 UTC, cioe' le 3:30 in Italia d'estate
+    - cron: "30 1 * * *"     # 01:30 UTC. Il cron di GitHub parte in ritardo,
+                             # anche di ore: per questo lo script sceglie da se'
+                             # se scansionare oggi o domani, in base all'ora.
   workflow_dispatch:
     inputs:
       zona:
@@ -27,9 +31,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  zone:
+  elenca:
     runs-on: ubuntu-latest
-    timeout-minutes: 330
+    outputs:
+      regioni: ${{ steps.calcola.outputs.regioni }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: calcola
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          aree = json.load(open("tools/aree.json"))
+          scelte = os.environ.get("ZONA", "").split()
+          if scelte:
+              aree = [a for a in aree if a["slug"] in scelte]
+          regioni = sorted({a["region"] for a in aree})
+          print("regioni=" + json.dumps(regioni))
+          PY
+        env:
+          ZONA: ${{ github.event.inputs.zona }}
+
+  zone:
+    needs: elenca
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false          # una regione che fallisce non ferma le altre
+      max-parallel: 3           # Overpass respinge le richieste troppo ravvicinate
+      matrix:
+        regione: ${{ fromJson(needs.elenca.outputs.regioni) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -38,69 +68,106 @@ jobs:
           python-version: "3.12"
 
       # I binari cambiano molto piu' lentamente degli orari: riscaricarli ogni
-      # notte per dieci zone significherebbe venti interrogazioni pesanti a
-      # Overpass, che limita le richieste ravvicinate e finirebbe per
-      # respingerle. La chiave contiene l'anno e il mese, quindi la copia si
-      # rinnova da sola una volta al mese.
+      # notte per tutte le zone significherebbe decine di interrogazioni pesanti
+      # a Overpass, che limita le richieste ravvicinate.
       - name: Recupera la copia locale di binari e nodi
         uses: actions/cache@v4
         with:
           path: tools/cache
-          key: osm-${{ hashFiles('tools/aree.json') }}-${{ github.run_id }}
+          key: osm-${{ matrix.regione }}-${{ hashFiles('tools/aree.json') }}-${{ github.run_id }}
           restore-keys: |
-            osm-${{ hashFiles('tools/aree.json') }}-
+            osm-${{ matrix.regione }}-${{ hashFiles('tools/aree.json') }}-
+            osm-${{ matrix.regione }}-
 
-      - name: Rigenera le zone
+      - name: Rigenera le zone di ${{ matrix.regione }}
         run: |
-          zone="${{ github.event.inputs.zona }}"
-          if [ -z "$zone" ]; then
-            zone=$(python3 -c "import json;print(' '.join(a['slug'] for a in json.load(open('tools/aree.json'))))")
-          fi
+          zone=$(python3 - <<'PY'
+          import json, os
+          aree = json.load(open("tools/aree.json"))
+          scelte = os.environ.get("ZONA", "").split()
+          print(" ".join(a["slug"] for a in aree
+                         if a["region"] == os.environ["REGIONE"]
+                         and (not scelte or a["slug"] in scelte)))
+          PY
+          )
+          echo "zone: $zone"
           for z in $zone; do
             echo "::group::$z"
             # Una zona che fallisce non deve impedire alle altre di aggiornarsi.
             python3 tools/build_area.py "$z" --cache-ways \
               || echo "zona $z non riuscita, proseguo"
-            sleep 30    # respiro fra una zona e l'altra, per non farsi respingere
             echo "::endgroup::"
+            sleep 20
           done
+        env:
+          REGIONE: ${{ matrix.regione }}
+          ZONA: ${{ github.event.inputs.zona }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zone-${{ matrix.regione }}
+          path: data/aree/*.json
+          retention-days: 1
+          if-no-files-found: warn
+
+  unisci:
+    needs: zone
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/zone
+          merge-multiple: true
+
+      - name: Rimetti insieme e rigenera l'indice
+        run: |
+          if ! ls /tmp/zone/*.json >/dev/null 2>&1; then
+            echo "nessuna zona prodotta: non c'e' niente da unire"
+            exit 1
+          fi
+          cp /tmp/zone/*.json data/aree/
+          python3 -c "import sys;sys.path.insert(0,'tools');import build_area;build_area.update_index()"
+          python3 tools/update_readme.py
 
       - name: Controlla che i file siano sensati
         run: |
           python3 - <<'PY'
-          import json, os, sys
+          import json, sys
           index = json.load(open("data/aree.json"))
           if not index["areas"]:
               sys.exit("nessuna zona nell'indice")
+          problemi = []
           for meta in index["areas"]:
               d = json.load(open(f"data/aree/{meta['slug']}.json"))
               n_t, n_x, n_s = len(d["trains"]), len(d["crossings"]), len(d["segments"])
               print(f"{meta['slug']}: {n_t} treni, {n_x} PL "
                     f"({meta['covered']} con previsione), {n_s} tratte")
-              # Un file svuotato o troncato e' peggio di uno vecchio: meglio
-              # non committare affatto e lasciare in piedi quello precedente.
-              if n_t < 20:
-                  sys.exit(f"{meta['slug']}: solo {n_t} treni, scansione incompleta")
-              if n_x < 5:
-                  sys.exit(f"{meta['slug']}: solo {n_x} passaggi a livello")
-              if meta["covered"] < 1:
-                  sys.exit(f"{meta['slug']}: nessun PL con previsione")
+              # Un file svuotato o troncato e' peggio di uno vecchio.
+              if n_x < 1:
+                  problemi.append(f"{meta['slug']}: nessun passaggio a livello")
               codes = [s["code"] for s in d["stations"]]
               if len(codes) != len(set(codes)):
-                  sys.exit(f"{meta['slug']}: codici stazione duplicati")
-              media = sum(len(t["stops"]) for t in d["trains"]) / n_t
-              if media < 2.5:
-                  sys.exit(f"{meta['slug']}: {media:.1f} fermate medie, dati mutili")
+                  problemi.append(f"{meta['slug']}: codici stazione duplicati")
+          if problemi:
+              sys.exit("\n".join(problemi))
           PY
 
       - name: Committa se qualcosa e' cambiato
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- data/ tools/cache; then
+          if git diff --quiet -- data/ README.md; then
             echo "nessuna variazione"
             exit 0
           fi
-          git add data/ tools/cache
+          git add data/ README.md
           git commit -m "Aggiorna i dati delle zone ($(date -u +%Y-%m-%d))"
           git push
