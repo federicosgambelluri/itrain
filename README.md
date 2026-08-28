@@ -42,6 +42,7 @@ amministrativo.
 | Reggio Emilia e provincia | Emilia-Romagna | **46 su 93** con previsione | 69 | 39 KB |
 | Rimini e provincia | Emilia-Romagna | **8 su 9** con previsione | 38 | 17 KB |
 | Gorizia e provincia | Friuli-Venezia Giulia | **5 su 6** con previsione | 121 | 38 KB |
+| Pordenone e provincia | Friuli-Venezia Giulia | **44 su 58** con previsione | 91 | 40 KB |
 | Trieste e provincia | Friuli-Venezia Giulia | **0 su 2** con previsione | 0 | 1 KB |
 | Udine e provincia | Friuli-Venezia Giulia | **26 su 54** con previsione | 131 | 64 KB |
 | Frosinone e provincia | Lazio | **18 su 19** con previsione | 6 | 9 KB |
@@ -118,7 +119,7 @@ amministrativo.
 | Verona e provincia | Veneto | **55 su 58** con previsione | 143 | 61 KB |
 | Vicenza e provincia | Veneto | tutti e 46 | 289 | 110 KB |
 
-In totale **3618 passaggi a livello con previsione** su 5044 censiti, in 102 zone.
+In totale **3662 passaggi a livello con previsione** su 5102 censiti, in 103 zone.
 <!-- zone:fine -->
 
 I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
