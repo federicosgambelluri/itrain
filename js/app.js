@@ -709,6 +709,7 @@ function applyOthers() {
   gmap.setOthers(
     state.allPoints.filter((p) => p[3] !== mine),
     (zona, id) => loadArea(zona, { select: id }),
+    () => renderMap(),   // il conteggio dipende da cosa e' inquadrato
   );
 }
 
@@ -727,9 +728,12 @@ function renderMap() {
   const moving = state.trains.filter(
     (t) => trainPosition(t, state.segments, now, state.area.model)).length;
   const senza = state.crossings.filter((c) => c.covered === false).length;
+  const ins = gmap.statoInsieme?.() ?? { passo: 1 };
   $("mapNote").textContent = state.showAll
     ? `${state.allPoints.length} passaggi a livello in ${state.index.areas.length} zone · ` +
-      "tocca un puntino grigio per aprirne la zona"
+      (ins.passo > 1
+        ? `ne vedi uno ogni ${ins.passo}, ingrandisci per vederli tutti`
+        : "tocca un puntino grigio per aprirne la zona")
     : `${state.area.crossings.length} passaggi a livello` +
     (senza ? `, ${senza} senza dati treno` : "") + " · " +
     (moving ? `${moving} ${moving === 1 ? "treno in corsa" : "treni in corsa"}`

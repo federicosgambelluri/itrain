@@ -137,9 +137,10 @@ export function setCrossings(crossings, selectedId) {
  * solo quando se ne tocca uno. Meglio un puntino grigio onesto che un colore
  * inventato.
  */
-export function setOthers(points, onPick) {
+export function setOthers(points, onPick, onDraw) {
   otherPoints = points;
   onPickOther = onPick;
+  onDrawn = onDraw ?? onDrawn;
   drawOthers();
 }
 
@@ -149,7 +150,7 @@ export function clearOthers() {
 }
 
 /** Quanti punti al massimo disegnare insieme, per non impastare la mappa. */
-const MAX_OTHERS = 600;
+const MAX_OTHERS = 1200;
 
 function drawOthers() {
   // senza un centro impostato Leaflet non puo' dire cosa e' inquadrato
@@ -161,16 +162,28 @@ function drawOthers() {
   const z = map.getZoom();
   const r = z >= 13 ? 6 : z >= 10 ? 4.5 : 3.5;
 
-  let n = 0;
-  for (const [lat, lon, nome, zona, id, coperto] of otherPoints) {
-    if (!b.contains([lat, lon])) continue;
-    if (++n > MAX_OTHERS) break;
+  const visibili = otherPoints.filter((p) => b.contains([p[0], p[1]]));
+
+  // Quando i punti inquadrati superano il massimo se ne disegna uno ogni N,
+  // invece di prendere i primi e fermarsi.
+  //
+  // Prendere i primi sembrava equivalente e non lo era: l'elenco e' ordinato
+  // per latitudine, quindi il budget si esauriva in Sicilia e il resto
+  // d'Italia restava vuoto. Con mille punti non si notava, con cinquemila la
+  // mappa sembrava rotta. Il passo uniforme distribuisce quel che si mostra su
+  // tutta l'area inquadrata.
+  const passo = Math.max(1, Math.ceil(visibili.length / MAX_OTHERS));
+
+  for (let i = 0; i < visibili.length; i += passo) {
+    const [lat, lon, nome, zona, id, coperto] = visibili[i];
     const m = L.circleMarker([lat, lon], {
       radius: r,
       weight: 1,
       color: "#ffffff",
       opacity: 0.55,
       fillColor: coperto ? "#94a3bd" : "#475569",
+      // i passaggi a livello senza dati restano visibili ma smorzati:
+      // ci sono, semplicemente non se ne sa lo stato
       fillOpacity: coperto ? 0.75 : 0.4,
       className: "other-marker",
     }).addTo(others);
@@ -178,7 +191,17 @@ function drawOthers() {
                   { direction: "top", offset: [0, -4] });
     m.on("click", () => onPickOther?.(zona, id));
   }
-  return n;
+
+  ultimoDisegno = { inquadrati: visibili.length, passo };
+  onDrawn?.(ultimoDisegno);
+}
+
+let ultimoDisegno = { inquadrati: 0, passo: 1 };
+let onDrawn = null;
+
+/** Quanti punti sono inquadrati e ogni quanti se ne disegna uno. */
+export function statoInsieme() {
+  return ultimoDisegno;
 }
 
 /** Quanti punti d'insieme sono attualmente inquadrati. */
