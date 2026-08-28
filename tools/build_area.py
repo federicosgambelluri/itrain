@@ -76,10 +76,26 @@ def wide_bbox(area):
     if area.get("bbox"):
         s, w, n, e = area["bbox"]
     else:
-        r = overpass(f'[out:json][timeout:120];'
-                     f'rel["admin_level"="{area.get("admin_level","6")}"]'
-                     f'["boundary"="administrative"]["name"="{area["osm_area"]}"];out bb;')
-        b = r["elements"][0]["bounds"]
+        # Overpass a volte risponde con un elenco vuoto invece di un errore.
+        # Prenderlo per buono faceva fallire la zona per un problema
+        # passeggero: Pordenone e' caduta cosi', pur esistendo benissimo.
+        b = None
+        for tentativo in range(3):
+            if tentativo:
+                time.sleep(15 * tentativo)
+                print(f"    confine di {area['osm_area']} non trovato, riprovo...",
+                      file=sys.stderr)
+            r = overpass(f'[out:json][timeout:120];'
+                         f'rel["admin_level"="{area.get("admin_level","6")}"]'
+                         f'["boundary"="administrative"]["name"="{area["osm_area"]}"];out bb;')
+            if r.get("elements"):
+                b = r["elements"][0]["bounds"]
+                break
+        if b is None:
+            raise RuntimeError(
+                f"confine amministrativo non trovato per {area['osm_area']!r}: "
+                "il nome in tools/aree.json non corrisponde a OpenStreetMap, "
+                "oppure Overpass non risponde")
         s, w, n, e = b["minlat"], b["minlon"], b["maxlat"], b["maxlon"]
     return (round(s - BUFFER_DEG, 4), round(w - BUFFER_DEG, 4),
             round(n + BUFFER_DEG, 4), round(e + BUFFER_DEG, 4))
@@ -493,6 +509,23 @@ def main():
         x["name"] = nm
         x.pop("nodes", None)
 
+    # Una zona senza passaggi a livello non ha ragione di esistere nel
+    # selettore. Succede in due casi: dove la ferrovia corre tutta in galleria,
+    # come a Imperia, e dove tutti gli attraversamenti trovati stanno su binari
+    # di servizio, come a Prato e a Cagliari.
+    #
+    # Il controllo sta qui, prima di qualunque calcolo sulle coordinate:
+    # messo dopo -- come era -- il programma moriva su min() di una lista vuota
+    # prima ancora di arrivarci, e la zona falliva invece di essere saltata.
+    if not xings:
+        print(f"\nNessun passaggio a livello in {area['name']}: zona non pubblicata",
+              file=sys.stderr)
+        stale = f"{OUTDIR}/{area['slug']}.json"
+        if os.path.exists(stale):
+            os.remove(stale)
+        update_index()
+        return
+
     n_cov = sum(1 for x in xings if x["covered"])
     lats = [x["lat"] for x in xings] or [s["lat"] for s in stations]
     lons = [x["lon"] for x in xings] or [s["lon"] for s in stations]
@@ -508,18 +541,6 @@ def main():
         "trains": trains,
         "model": MODEL,
     }
-    # Una zona senza passaggi a livello non ha ragione di esistere nel
-    # selettore: in Liguria succede davvero, perche' la ferrovia corre quasi
-    # tutta in galleria e a Imperia di attraversamenti a raso non ce n'e' uno.
-    if not xings:
-        print(f"\nNessun passaggio a livello in {area['name']}: zona non pubblicata",
-              file=sys.stderr)
-        stale = f"{OUTDIR}/{area['slug']}.json"
-        if os.path.exists(stale):
-            os.remove(stale)
-        update_index()
-        return
-
     os.makedirs(OUTDIR, exist_ok=True)
     out = f"{OUTDIR}/{area['slug']}.json"
     json.dump(payload, open(out, "w"), ensure_ascii=False, separators=(",", ":"))
