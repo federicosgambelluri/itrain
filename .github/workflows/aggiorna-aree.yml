@@ -143,7 +143,7 @@ jobs:
           path: /tmp/zone
           merge-multiple: true
 
-      - name: Rimetti insieme e rigenera l'indice
+      - name: Rimetti insieme le zone prodotte
         run: |
           if ! ls /tmp/zone/*.json >/dev/null 2>&1; then
             echo "nessuna zona prodotta: non c'e' niente da unire"
@@ -159,65 +159,81 @@ jobs:
               echo "scartato perche' illeggibile: $(basename "$f")"
             fi
           done
+
+      - name: Scarta le zone peggiorate e tieni le buone
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+
+          def committata(percorso):
+              """Il file com'era prima di questa esecuzione."""
+              r = subprocess.run(["git", "show", f"HEAD:{percorso}"],
+                                 capture_output=True, text=True)
+              if r.returncode != 0:
+                  return None
+              try:
+                  return json.loads(r.stdout)
+              except json.JSONDecodeError:
+                  return None
+
+          # Una zona peggiorata viene riportata alla versione precedente, non
+          # fatta fallire tutta l'esecuzione. Bloccare l'intero commit per una
+          # provincia andata male -- come e' successo con Campobasso, passato
+          # da otto treni a zero -- avrebbe tenuto ferme anche tutte le altre,
+          # che erano buone.
+          respinte, rotte = [], []
+          for fn in sorted(os.listdir("data/aree")):
+              if not fn.endswith(".json"):
+                  continue
+              percorso = f"data/aree/{fn}"
+              try:
+                  nuovo = json.load(open(percorso))
+              except json.JSONDecodeError:
+                  rotte.append(fn)
+                  continue
+              vecchio = committata(percorso)
+              if not vecchio:
+                  continue      # zona nuova: non c'e' con cosa confrontarla
+
+              n_t, v_t = len(nuovo["trains"]), len(vecchio["trains"])
+              n_c = sum(1 for c in nuovo["crossings"] if c.get("covered"))
+              v_c = sum(1 for c in vecchio["crossings"] if c.get("covered"))
+              motivo = None
+              if v_t and n_t < v_t * 0.5:
+                  motivo = f"treni da {v_t} a {n_t}"
+              elif v_c and n_c < v_c * 0.5:
+                  motivo = f"PL con previsione da {v_c} a {n_c}"
+              if motivo:
+                  respinte.append(f"{fn}: {motivo}")
+                  subprocess.run(["git", "checkout", "HEAD", "--", percorso], check=True)
+
+          for fn in rotte:
+              print(f"illeggibile, ripristinato: {fn}")
+              subprocess.run(["git", "checkout", "HEAD", "--", f"data/aree/{fn}"])
+          for r in respinte:
+              print(f"peggiorata, ripristinata: {r}")
+          print(f"\n{len(respinte)} zone respinte, {len(rotte)} illeggibili")
+          PY
+
+      - name: Rigenera indice e README
+        run: |
           python3 -c "import sys;sys.path.insert(0,'tools');import build_area;build_area.update_index()"
           python3 tools/update_readme.py
 
-      - name: Controlla che i file siano sensati
+      - name: Controlla che l'insieme sia sensato
         run: |
           python3 - <<'PY'
-          import json, subprocess, sys
-
-          def versione_committata(percorso):
-              """Il file com'era prima di questa esecuzione, per confronto."""
-              try:
-                  return json.loads(subprocess.run(
-                      ["git", "show", f"HEAD:{percorso}"],
-                      capture_output=True, text=True, check=True).stdout)
-              except Exception:
-                  return None
-
+          import json, sys
           index = json.load(open("data/aree.json"))
-          if not index["areas"]:
-              sys.exit("nessuna zona nell'indice")
-
-          problemi = []
+          if len(index["areas"]) < 50:
+              sys.exit(f"solo {len(index['areas'])} zone nell'indice: qualcosa e' andato storto")
           for meta in index["areas"]:
-              percorso = f"data/aree/{meta['slug']}.json"
-              d = json.load(open(percorso))
-              n_t, n_x, n_s = len(d["trains"]), len(d["crossings"]), len(d["segments"])
-              prima = versione_committata(percorso)
-              nota = ""
-              if prima:
-                  nota = f" (prima: {len(prima['trains'])} treni, {prima['covered']} coperti)"
-              print(f"{meta['slug']}: {n_t} treni, {n_x} PL "
-                    f"({meta['covered']} con previsione), {n_s} tratte{nota}")
-
-              # Un file svuotato o troncato e' peggio di uno vecchio.
-              if n_x < 1:
-                  problemi.append(f"{meta['slug']}: nessun passaggio a livello")
+              d = json.load(open(f"data/aree/{meta['slug']}.json"))
               codes = [s["code"] for s in d["stations"]]
               if len(codes) != len(set(codes)):
-                  problemi.append(f"{meta['slug']}: codici stazione duplicati")
-
-              # Un aggiornamento che dimezza i dati e' quasi sempre una
-              # scansione andata male, non un cambio d'orario. E' successo:
-              # una esecuzione partita nel pomeriggio ha portato Isernia da
-              # ventiquattro treni a quattro, e nessun controllo se n'e'
-              # accorto. Meglio tenere il file vecchio e fallire rumorosamente.
-              if prima and prima["trains"]:
-                  calo_treni = 1 - n_t / len(prima["trains"])
-                  calo_pl = 1 - meta["covered"] / max(prima["covered"], 1)
-                  if calo_treni > 0.5:
-                      problemi.append(
-                          f"{meta['slug']}: i treni sono passati da "
-                          f"{len(prima['trains'])} a {n_t}")
-                  if calo_pl > 0.5:
-                      problemi.append(
-                          f"{meta['slug']}: i PL con previsione sono passati da "
-                          f"{prima['covered']} a {meta['covered']}")
-
-          if problemi:
-              sys.exit("\n".join(problemi))
+                  sys.exit(f"{meta['slug']}: codici stazione duplicati")
+          coperti = sum(a["covered"] for a in index["areas"])
+          print(f"{len(index['areas'])} zone, {coperti} passaggi a livello con previsione")
           PY
 
       - name: Committa se qualcosa e' cambiato
