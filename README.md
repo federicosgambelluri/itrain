@@ -24,7 +24,7 @@ amministrativo.
 | Catanzaro e provincia | Calabria | tutti e 18 | 56 | 17 KB |
 | Cosenza e provincia | Calabria | **30 su 31** con previsione | 39 | 27 KB |
 | Crotone e provincia | Calabria | tutti e 16 | 24 | 14 KB |
-| Locride e Ferrovia Jonica | Calabria | tutti e 40 | 111 | 77 KB |
+| Locride e Ferrovia Jonica | Calabria | tutti e 40 | 72 | 61 KB |
 | Reggio Calabria e provincia | Calabria | tutti e 17 | 57 | 37 KB |
 | Vibo Valentia e provincia | Calabria | tutti e 6 | 28 | 19 KB |
 | Avellino e provincia | Campania | **3 su 72** con previsione | 4 | 10 KB |
@@ -70,7 +70,7 @@ amministrativo.
 | Macerata e provincia | Marche | tutti e 40 | 21 | 20 KB |
 | Pesaro e Urbino e provincia | Marche | **0 su 2** con previsione | 0 | 1 KB |
 | Campobasso e provincia | Molise | **2 su 59** con previsione | 8 | 10 KB |
-| Isernia e provincia | Molise | **15 su 24** con previsione | 24 | 10 KB |
+| Isernia e provincia | Molise | **15 su 24** con previsione | 19 | 9 KB |
 | Alessandria e provincia | Piemonte | **78 su 100** con previsione | 168 | 81 KB |
 | Asti e provincia | Piemonte | **52 su 93** con previsione | 49 | 36 KB |
 | Biella e provincia | Piemonte | **13 su 29** con previsione | 34 | 11 KB |
