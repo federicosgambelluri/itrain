@@ -31,7 +31,9 @@ const state = {
   exactDay: true,
   position: null,
   usingFallback: true,
-  crossings: [],
+  crossings: [],      // solo quelli con previsione
+  omessi: [],         // esistono, ma i loro treni non sono pubblicati
+  omessiLimit: 12,
   selectedId: null,
   listLimit: 8,
   lastRefresh: null,
@@ -174,7 +176,11 @@ async function loadArea(slug, { remember = true, select = null } = {}) {
     }
     if (state.usingFallback) state.position = areaCentre(meta);
     gmap.clear();
-    state.mapFitted = !select;   // scegliendo un PL preciso si va li', non sul riquadro
+    // Con un PL da selezionare si va direttamente li' e il riquadro non serve;
+    // altrimenti la mappa va ancora inquadrata. La condizione era invertita, e
+    // con select nullo marcava la mappa come "gia' inquadrata": non veniva mai
+    // impostata una vista, e Leaflet restava senza mattonelle ne' punti.
+    state.mapFitted = Boolean(select);
     recompute();
     if (select) {
       const c = state.crossings.find((k) => k.id === select);
@@ -287,16 +293,26 @@ function recompute() {
   if (!state.area) return;
   const { lat, lon } = state.position ?? { lat: 0, lon: 0 };
 
-  state.crossings = state.area.crossings.map((c, index) => {
+  const tutti = state.area.crossings.map((c, index) => {
     const correction = calib.forCrossing(`${state.area.slug}:${c.id}`);
     return {
       ...c,
       index,
       distance: haversine(lat, lon, c.lat, c.lon),
-      windows: closuresFor(index, state.trains, state.segments, state.area.model, correction),
+      windows: c.covered === false
+        ? []
+        : closuresFor(index, state.trains, state.segments, state.area.model, correction),
       calibration: calib.progress(`${state.area.slug}:${c.id}`),
     };
   }).sort((a, b) => a.distance - b.distance);
+
+  // I passaggi a livello di cui non si sa nulla escono dalla vista principale:
+  // in certe province sono la grande maggioranza -- a Campobasso 57 su 59 --
+  // e mescolati agli altri riempivano l'elenco di "non lo so" seppellendo i
+  // pochi utili. Restano pero' elencati nella loro sezione, con il perche':
+  // sapere che ci sono e che l'app non li sorveglia serve.
+  state.crossings = tutti.filter((c) => c.covered !== false);
+  state.omessi = tutti.filter((c) => c.covered === false);
 
   if (!state.selectedId || !state.crossings.some((c) => c.id === state.selectedId)) {
     state.selectedId = state.crossings[0]?.id ?? null;
@@ -316,6 +332,7 @@ function tick() {
   renderHero();
   renderList();
   renderTimeline();
+  renderOmessi();
   renderMap();
 }
 
@@ -330,6 +347,8 @@ function render() {
   renderBanner();
   renderCalibSummary();
   for (const el of ["mapPanel", "timelinePanel", "listPanel"]) $(el).hidden = false;
+  $("timelinePanel").hidden = !state.crossings.length;
+  $("listPanel").hidden = !state.crossings.length;
 
   // La mappa va inquadrata dopo che il pannello e' visibile: finche' e'
   // nascosto il contenitore ha altezza zero e Leaflet calcola male.
@@ -427,7 +446,14 @@ function renderHero() {
   const c = selected();
   const hero = $("hero");
   if (!c) {
-    hero.innerHTML = '<div class="hero-loading"><div class="spinner"></div><p>Carico la zona…</p></div>';
+    hero.innerHTML = state.omessi.length
+      ? `<div class="hero-top"><div>
+           <div class="hero-label">${state.area.name}</div>
+           <h1 class="hero-name">Nessuna previsione qui</h1>
+           <div class="hero-sub">I ${state.omessi.length} passaggi a livello di questa zona
+             stanno su linee i cui treni non sono pubblicati. Li trovi elencati sotto.</div>
+         </div></div>`
+      : '<div class="hero-loading"><div class="spinner"></div><p>Carico la zona…</p></div>';
     return;
   }
 
@@ -727,17 +753,50 @@ function renderMap() {
 
   const moving = state.trains.filter(
     (t) => trainPosition(t, state.segments, now, state.area.model)).length;
-  const senza = state.crossings.filter((c) => c.covered === false).length;
   const ins = gmap.statoInsieme?.() ?? { passo: 1 };
   $("mapNote").textContent = state.showAll
     ? `${state.allPoints.length} passaggi a livello in ${state.index.areas.length} zone · ` +
       (ins.passo > 1
         ? `ne vedi uno ogni ${ins.passo}, ingrandisci per vederli tutti`
         : "tocca un puntino grigio per aprirne la zona")
-    : `${state.area.crossings.length} passaggi a livello` +
-    (senza ? `, ${senza} senza dati treno` : "") + " · " +
+    : `${state.crossings.length} con previsione` +
+    (state.omessi.length ? `, ${state.omessi.length} senza dati` : "") + " · " +
     (moving ? `${moving} ${moving === 1 ? "treno in corsa" : "treni in corsa"}`
             : "nessun treno in corsa");
+}
+
+function renderOmessi() {
+  const panel = $("omessiPanel");
+  if (!state.omessi.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  $("omessiNota").textContent =
+    `${state.omessi.length} su ${state.area.crossings.length} in questa zona`;
+
+  const mostrati = state.omessi.slice(0, state.omessiLimit);
+  $("omessi").innerHTML = mostrati.map((c) => {
+    const st = nearestStation(c);
+    return `<li>
+      <span class="nome">${c.name}</span>
+      <span class="dove">${st ? st.name : ""}</span>
+      <span class="dist">${formatDistance(c.distance)}</span>
+    </li>`;
+  }).join("");
+
+  const piu = $("omessiPiu");
+  if (state.omessi.length > mostrati.length) {
+    piu.hidden = false;
+    piu.textContent = `mostra gli altri ${state.omessi.length - mostrati.length}`;
+    piu.onclick = () => { state.omessiLimit = state.omessi.length; renderOmessi(); };
+  } else if (state.omessi.length > 12) {
+    piu.hidden = false;
+    piu.textContent = "mostra solo i più vicini";
+    piu.onclick = () => { state.omessiLimit = 12; renderOmessi(); };
+  } else {
+    piu.hidden = true;
+  }
 }
 
 function renderTimeline() {

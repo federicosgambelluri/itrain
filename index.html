@@ -91,7 +91,6 @@
       <span><i class="dot open"></i> aperto</span>
       <span><i class="dot closing"></i> sta per chiudersi</span>
       <span><i class="dot closed"></i> chiuso</span>
-      <span><i class="dot nodata"></i> dati non disponibili</span>
       <span id="othersLegend" hidden><i class="dot other"></i> altre zone</span>
       <span class="map-hint">tocca un cerchio per sceglierlo</span>
     </p>
@@ -114,6 +113,22 @@
       <span class="panel-note">in ordine di distanza</span>
     </div>
     <ul class="crossing-list" id="list"></ul>
+  </section>
+
+  <!-- Passaggi a livello che non possiamo prevedere -->
+  <section class="card panel" id="omessiPanel" hidden>
+    <div class="panel-head">
+      <h2>Non coperti in questa zona</h2>
+      <span class="panel-note" id="omessiNota"></span>
+    </div>
+    <p class="omessi-perche">
+      Esistono, ma su di essi non posso dire nulla: i treni della linea che
+      attraversano non sono pubblicati da nessuna parte. Li elenco lo stesso,
+      perché sapere che ci sono e che l'app non li sorveglia è più utile che
+      non trovarli affatto.
+    </p>
+    <ul class="omessi-list" id="omessi"></ul>
+    <button class="btn ghost wide" id="omessiPiu" hidden></button>
   </section>
 
   <!-- Trasparenza sul metodo -->

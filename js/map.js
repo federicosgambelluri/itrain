@@ -33,6 +33,7 @@ let onSelect = null;
 let onPickOther = null;
 let otherPoints = null;   // [lat, lon, nome, zona, id, coperto]
 let hasView = false;      // Leaflet non sa dare i confini finche' non ha un centro
+let fitAttesa = null;     // inquadratura chiesta mentre il contenitore era a zero
 
 export function isReady() {
   return Boolean(map);
@@ -63,22 +64,60 @@ export function init(el, { onSelect: cb } = {}) {
   // evita di intrappolare la pagina mentre si scorre col dito o la rotella
   map.on("focus", () => map.scrollWheelZoom.enable());
   map.on("blur", () => map.scrollWheelZoom.disable());
+
+  // La mappa viene creata mentre il suo pannello e' ancora nascosto, quindi
+  // il contenitore misura zero per zero: Leaflet non carica le mattonelle e
+  // calcola un ingrandimento senza senso -- si vedeva mezzo Mediterraneo e
+  // nessun punto. Guardare le dimensioni e reagire quando diventano reali e'
+  // piu' affidabile che sperare di chiamare invalidateSize al momento giusto.
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver((voci) => {
+      const r = voci[0]?.contentRect;
+      if (!r || r.width < 40 || r.height < 40) return;
+      map.invalidateSize();
+      if (fitAttesa) {
+        const b = fitAttesa;
+        fitAttesa = null;
+        fitBbox(b.bbox, b.options);
+      }
+    }).observe(el);
+  }
   return true;
 }
 
+/** Il contenitore ha una dimensione utilizzabile? */
+function misurabile() {
+  const el = map?.getContainer();
+  return Boolean(el && el.clientWidth > 40 && el.clientHeight > 40);
+}
+
 export function invalidate() {
-  map?.invalidateSize();
+  if (!map) return;
+  map.invalidateSize();
+  if (fitAttesa && misurabile()) {
+    const b = fitAttesa;
+    fitAttesa = null;
+    fitBbox(b.bbox, b.options);
+  }
 }
 
 /** Inquadra un riquadro [sud, ovest, nord, est]. */
 export function fitBbox(bbox, options = {}) {
   if (!map || !bbox) return;
+  // Inquadrare un contenitore ancora a zero produce un ingrandimento sbagliato:
+  // si mette da parte e ci pensa il ResizeObserver appena c'e' spazio vero.
+  if (!misurabile()) {
+    fitAttesa = { bbox, options };
+    return;
+  }
   map.fitBounds([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], { padding: [24, 24], ...options });
   hasView = true;
+  drawOthers();
 }
 
 export function focusOn(lat, lon, zoom = 15) {
   if (!map) return;
+  fitAttesa = null;
   map.setView([lat, lon], zoom, { animate: true });
   hasView = true;
 }

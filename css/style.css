@@ -770,6 +770,22 @@ a { color: var(--accent); }
 .nodata-note p:last-child { margin: 0; }
 .nodata-note strong { color: var(--text); }
 
+.omessi-perche {
+  margin: 0 0 14px; font-size: .87rem; line-height: 1.6; color: var(--muted);
+}
+.omessi-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.omessi-list li {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: .87rem;
+}
+.omessi-list li:last-child { border-bottom: 0; }
+.omessi-list .nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omessi-list .dove { color: var(--faint); font-size: .8rem; flex: none; }
+.omessi-list .dist {
+  color: var(--muted); font-variant-numeric: tabular-nums;
+  flex: none; min-width: 62px; text-align: right;
+}
+
 .about-body { font-size: .9rem; color: var(--muted); line-height: 1.65; }
 .about-body strong { color: var(--text); }
 .about-body em { color: var(--text); font-style: normal; font-weight: 600; }

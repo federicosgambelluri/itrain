@@ -6,7 +6,7 @@
  * cache: un ritardo di dieci minuti fa non serve a nessuno.
  */
 
-const VERSION = "itrain-v4";   // cambiata con il passaggio alle zone e alla mappa
+const VERSION = "itrain-v5";   // mappa corretta e passaggi a livello non coperti separati
 
 // Il guscio dell'app: piccolo, stabile, si mette in cache all'installazione.
 // I dati delle zone no: sono grandi e sono molti, e scaricarli tutti per

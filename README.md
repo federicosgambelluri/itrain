@@ -257,11 +257,16 @@ il GTFS degli **autobus**, non quello dei treni, e non ho trovato un GTFS
 ferroviario aperto. Restano i PDF degli orari, trascrivibili a mano nel formato
 dell'app se un giorno servisse.
 
-**I passaggi a livello scoperti restano comunque in elenco**, segnati come
-«dati non disponibili» e grigi sulla mappa. Farli sparire sarebbe stata la
-scelta comoda e quella sbagliata: chi apre l'app davanti a uno di essi deve
-leggere *«non lo so»*, non trovare il nulla e concluderne che la zona sia
-coperta. Se un giorno i dati compariranno, si accendono da soli.
+**I passaggi a livello scoperti hanno una sezione tutta loro**, «Non coperti in
+questa zona», con l'elenco e il motivo. Non compaiono più nella vista
+principale né sulla mappa: in certe province sono la grande maggioranza — a
+Campobasso 57 su 59 — e mescolati agli altri riempivano l'elenco di «non lo so»
+seppellendo i pochi utili.
+
+Farli sparire del tutto sarebbe però stata la scelta comoda e quella sbagliata:
+chi si ferma davanti a uno di essi deve poter scoprire che esiste e che l'app
+non lo sorveglia, invece di non trovarlo e concluderne che la zona sia coperta.
+Se un giorno i dati compariranno, tornano nella vista principale da soli.
 
 ---
 
