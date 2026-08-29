@@ -91,6 +91,7 @@ jobs:
           PY
           )
           echo "zone: $zone"
+          echo "SLUG_ZONE=$zone" >> "$GITHUB_ENV"
           for z in $zone; do
             echo "::group::$z"
             # Una zona che fallisce non deve impedire alle altre di aggiornarsi.
@@ -103,10 +104,25 @@ jobs:
           REGIONE: ${{ matrix.regione }}
           ZONA: ${{ github.event.inputs.zona }}
 
+      # Si caricano solo i file costruiti da questo job.
+      #
+      # Caricando tutta la cartella, ogni job spediva anche le zone delle altre
+      # regioni gia' presenti nel repository: al momento di rimetterli insieme
+      # gli stessi nomi arrivavano da venti artefatti diversi, e un file usciva
+      # con due JSON attaccati. Il job di unione moriva su "Extra data" e per
+      # due notti di fila non e' stato committato nulla.
+      - name: Metti da parte solo le zone di questa regione
+        run: |
+          mkdir -p /tmp/prodotte
+          for z in $SLUG_ZONE; do
+            [ -f "data/aree/$z.json" ] && cp "data/aree/$z.json" /tmp/prodotte/
+          done
+          ls -la /tmp/prodotte/ || true
+
       - uses: actions/upload-artifact@v4
         with:
           name: zone-${{ matrix.regione }}
-          path: data/aree/*.json
+          path: /tmp/prodotte/*.json
           retention-days: 1
           if-no-files-found: warn
 
@@ -133,7 +149,16 @@ jobs:
             echo "nessuna zona prodotta: non c'e' niente da unire"
             exit 1
           fi
-          cp /tmp/zone/*.json data/aree/
+          echo "$(ls /tmp/zone/*.json | wc -l) file ricevuti dai job"
+          # Un file illeggibile va scartato, non deve far cadere l'unione:
+          # le altre zone sono buone e vanno committate lo stesso.
+          for f in /tmp/zone/*.json; do
+            if python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
+              cp "$f" data/aree/
+            else
+              echo "scartato perche' illeggibile: $(basename "$f")"
+            fi
+          done
           python3 -c "import sys;sys.path.insert(0,'tools');import build_area;build_area.update_index()"
           python3 tools/update_readme.py
 
