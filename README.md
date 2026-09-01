@@ -50,7 +50,7 @@ amministrativo.
 | Rieti e provincia | Lazio | **0 su 34** con previsione | 0 | 5 KB |
 | Roma e provincia | Lazio | **38 su 48** con previsione | 282 | 143 KB |
 | Viterbo e provincia | Lazio | **31 su 65** con previsione | 54 | 31 KB |
-| Genova e provincia | Liguria | tutti e 9 | 177 | 123 KB |
+| Genova e provincia | Liguria | tutti e 9 | 175 | 122 KB |
 | La Spezia e provincia | Liguria | **0 su 1** con previsione | 0 | 1 KB |
 | Savona e provincia | Liguria | tutti e 30 | 108 | 52 KB |
 | Bergamo e provincia | Lombardia | **33 su 35** con previsione | 150 | 60 KB |
@@ -60,8 +60,8 @@ amministrativo.
 | Lecco e provincia | Lombardia | tutti e 28 | 414 | 189 KB |
 | Lodi e provincia | Lombardia | tutti e 9 | 60 | 29 KB |
 | Mantova e provincia | Lombardia | **76 su 83** con previsione | 166 | 83 KB |
-| Milano e provincia | Lombardia | **12 su 13** con previsione | 702 | 356 KB |
-| Monza e Brianza e provincia | Lombardia | **42 su 54** con previsione | 551 | 309 KB |
+| Milano e provincia | Lombardia | **12 su 13** con previsione | 703 | 356 KB |
+| Monza e Brianza e provincia | Lombardia | **42 su 54** con previsione | 551 | 308 KB |
 | Pavia e provincia | Lombardia | **213 su 216** con previsione | 383 | 194 KB |
 | Sondrio e provincia | Lombardia | tutti e 59 | 92 | 57 KB |
 | Varese e provincia | Lombardia | **59 su 62** con previsione | 352 | 182 KB |
@@ -84,7 +84,7 @@ amministrativo.
 | Brindisi e provincia | Puglia | **72 su 92** con previsione | 102 | 51 KB |
 | Foggia e provincia | Puglia | **21 su 76** con previsione | 111 | 39 KB |
 | Lecce e provincia | Puglia | **102 su 192** con previsione | 71 | 60 KB |
-| Taranto e provincia | Puglia | **55 su 68** con previsione | 109 | 41 KB |
+| Taranto e provincia | Puglia | **55 su 68** con previsione | 110 | 41 KB |
 | Nuoro e provincia | Sardegna | tutti e 5 | 24 | 9 KB |
 | Oristano e provincia | Sardegna | **29 su 33** con previsione | 31 | 15 KB |
 | Sassari e provincia | Sardegna | **33 su 34** con previsione | 33 | 14 KB |
@@ -92,7 +92,7 @@ amministrativo.
 | Caltanissetta e provincia | Sicilia | **11 su 24** con previsione | 33 | 13 KB |
 | Catania e provincia | Sicilia | **32 su 36** con previsione | 95 | 42 KB |
 | Enna e provincia | Sicilia | tutti e 20 | 20 | 10 KB |
-| Messina e provincia | Sicilia | tutti e 10 | 92 | 39 KB |
+| Messina e provincia | Sicilia | tutti e 10 | 93 | 39 KB |
 | Palermo e provincia | Sicilia | **35 su 48** con previsione | 127 | 50 KB |
 | Ragusa e provincia | Sicilia | **39 su 40** con previsione | 21 | 16 KB |
 | Siracusa e provincia | Sicilia | **47 su 50** con previsione | 52 | 24 KB |
@@ -103,8 +103,8 @@ amministrativo.
 | Livorno e provincia | Toscana | **12 su 15** con previsione | 15 | 9 KB |
 | Lucca e provincia | Toscana | **40 su 44** con previsione | 215 | 85 KB |
 | Massa-Carrara e provincia | Toscana | **12 su 13** con previsione | 124 | 50 KB |
-| Pisa e provincia | Toscana | **28 su 46** con previsione | 173 | 73 KB |
-| Pistoia e provincia | Toscana | tutti e 13 | 120 | 57 KB |
+| Pisa e provincia | Toscana | **28 su 46** con previsione | 174 | 74 KB |
+| Pistoia e provincia | Toscana | tutti e 13 | 120 | 58 KB |
 | Siena e provincia | Toscana | **56 su 67** con previsione | 102 | 48 KB |
 | Bolzano e provincia | Trentino-Alto Adige | **8 su 47** con previsione | 44 | 25 KB |
 | Trento e provincia | Trentino-Alto Adige | tutti e 38 | 24 | 27 KB |
@@ -112,12 +112,12 @@ amministrativo.
 | Terni e provincia | Umbria | **0 su 8** con previsione | 0 | 1 KB |
 | Valle d'Aosta | Valle d'Aosta | **0 su 9** con previsione | 0 | 1 KB |
 | Belluno e provincia | Veneto | tutti e 13 | 76 | 31 KB |
-| Padova e provincia | Veneto | **78 su 80** con previsione | 412 | 192 KB |
+| Padova e provincia | Veneto | **78 su 80** con previsione | 411 | 192 KB |
 | Rovigo e provincia | Veneto | tutti e 64 | 58 | 32 KB |
-| Treviso e provincia | Veneto | tutti e 84 | 345 | 178 KB |
-| Venezia e provincia | Veneto | **72 su 74** con previsione | 454 | 173 KB |
+| Treviso e provincia | Veneto | tutti e 84 | 344 | 178 KB |
+| Venezia e provincia | Veneto | **72 su 74** con previsione | 453 | 173 KB |
 | Verona e provincia | Veneto | **55 su 58** con previsione | 144 | 61 KB |
-| Vicenza e provincia | Veneto | tutti e 46 | 290 | 111 KB |
+| Vicenza e provincia | Veneto | tutti e 46 | 289 | 110 KB |
 
 In totale **3761 passaggi a livello con previsione** su 5102 censiti, in 103 zone.
 <!-- zone:fine -->
