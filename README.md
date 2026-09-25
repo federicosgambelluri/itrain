@@ -15,111 +15,111 @@ amministrativo.
 <!-- zone:inizio -->
 | Zona | Regione | Passaggi a livello | Treni | Peso |
 |---|---|---|---|---|
-| Chieti e provincia | Abruzzo | **1 su 17** con previsione | 40 | 14 KB |
-| L'Aquila e provincia | Abruzzo | **88 su 99** con previsione | 113 | 72 KB |
-| Pescara e provincia | Abruzzo | tutti e 7 | 38 | 20 KB |
-| Teramo e provincia | Abruzzo | tutti e 11 | 38 | 22 KB |
+| Chieti e provincia | Abruzzo | **1 su 17** con previsione | 36 | 13 KB |
+| L'Aquila e provincia | Abruzzo | **88 su 99** con previsione | 100 | 68 KB |
+| Pescara e provincia | Abruzzo | tutti e 7 | 36 | 19 KB |
+| Teramo e provincia | Abruzzo | tutti e 11 | 25 | 15 KB |
 | Matera e provincia | Basilicata | **16 su 17** con previsione | 28 | 13 KB |
 | Potenza e provincia | Basilicata | **16 su 29** con previsione | 48 | 23 KB |
-| Catanzaro e provincia | Calabria | **17 su 18** con previsione | 54 | 16 KB |
+| Catanzaro e provincia | Calabria | **17 su 18** con previsione | 40 | 13 KB |
 | Cosenza e provincia | Calabria | **30 su 31** con previsione | 36 | 25 KB |
 | Crotone e provincia | Calabria | tutti e 16 | 22 | 13 KB |
-| Locride e Ferrovia Jonica | Calabria | tutti e 40 | 115 | 72 KB |
-| Reggio Calabria e provincia | Calabria | tutti e 17 | 71 | 44 KB |
-| Vibo Valentia e provincia | Calabria | tutti e 6 | 18 | 13 KB |
+| Locride e Ferrovia Jonica | Calabria | tutti e 40 | 87 | 56 KB |
+| Reggio Calabria e provincia | Calabria | tutti e 17 | 55 | 34 KB |
+| Vibo Valentia e provincia | Calabria | tutti e 6 | 14 | 10 KB |
 | Avellino e provincia | Campania | **11 su 72** con previsione | 5 | 11 KB |
-| Benevento e provincia | Campania | **35 su 75** con previsione | 35 | 20 KB |
-| Caserta e provincia | Campania | **15 su 56** con previsione | 143 | 67 KB |
-| Napoli e provincia | Campania | **30 su 40** con previsione | 274 | 134 KB |
-| Salerno e provincia | Campania | **58 su 65** con previsione | 191 | 111 KB |
-| Bologna e provincia | Emilia-Romagna | **36 su 51** con previsione | 260 | 131 KB |
-| Ferrara e provincia | Emilia-Romagna | **38 su 104** con previsione | 76 | 43 KB |
+| Benevento e provincia | Campania | **35 su 75** con previsione | 32 | 20 KB |
+| Caserta e provincia | Campania | **15 su 56** con previsione | 126 | 59 KB |
+| Napoli e provincia | Campania | **30 su 40** con previsione | 255 | 100 KB |
+| Salerno e provincia | Campania | **45 su 65** con previsione | 171 | 78 KB |
+| Bologna e provincia | Emilia-Romagna | **36 su 51** con previsione | 252 | 127 KB |
+| Ferrara e provincia | Emilia-Romagna | **38 su 104** con previsione | 74 | 39 KB |
 | Forlì-Cesena e provincia | Emilia-Romagna | tutti e 3 | 37 | 24 KB |
 | Modena e provincia | Emilia-Romagna | **28 su 31** con previsione | 141 | 55 KB |
-| Parma e provincia | Emilia-Romagna | tutti e 44 | 119 | 56 KB |
+| Parma e provincia | Emilia-Romagna | tutti e 44 | 117 | 56 KB |
 | Piacenza e provincia | Emilia-Romagna | tutti e 32 | 48 | 24 KB |
-| Ravenna e provincia | Emilia-Romagna | **89 su 114** con previsione | 108 | 66 KB |
-| Reggio Emilia e provincia | Emilia-Romagna | **82 su 93** con previsione | 121 | 65 KB |
+| Ravenna e provincia | Emilia-Romagna | **72 su 114** con previsione | 104 | 59 KB |
+| Reggio Emilia e provincia | Emilia-Romagna | **82 su 93** con previsione | 119 | 64 KB |
 | Rimini e provincia | Emilia-Romagna | **8 su 9** con previsione | 35 | 16 KB |
-| Gorizia e provincia | Friuli-Venezia Giulia | **5 su 6** con previsione | 130 | 42 KB |
-| Pordenone e provincia | Friuli-Venezia Giulia | **44 su 58** con previsione | 119 | 49 KB |
+| Gorizia e provincia | Friuli-Venezia Giulia | **5 su 6** con previsione | 123 | 41 KB |
+| Pordenone e provincia | Friuli-Venezia Giulia | **44 su 58** con previsione | 91 | 40 KB |
 | Trieste e provincia | Friuli-Venezia Giulia | **0 su 2** con previsione | 0 | 1 KB |
-| Udine e provincia | Friuli-Venezia Giulia | **27 su 54** con previsione | 139 | 70 KB |
-| Frosinone e provincia | Lazio | tutti e 19 | 10 | 14 KB |
-| Latina e provincia | Lazio | tutti e 2 | 107 | 47 KB |
-| Rieti e provincia | Lazio | tutti e 34 | 24 | 19 KB |
-| Roma e provincia | Lazio | **38 su 48** con previsione | 282 | 143 KB |
-| Viterbo e provincia | Lazio | **31 su 65** con previsione | 54 | 31 KB |
-| Genova e provincia | Liguria | tutti e 9 | 198 | 138 KB |
+| Udine e provincia | Friuli-Venezia Giulia | **34 su 54** con previsione | 138 | 69 KB |
+| Frosinone e provincia | Lazio | **18 su 19** con previsione | 12 | 15 KB |
+| Latina e provincia | Lazio | tutti e 2 | 91 | 41 KB |
+| Rieti e provincia | Lazio | tutti e 34 | 14 | 16 KB |
+| Roma e provincia | Lazio | **38 su 48** con previsione | 253 | 139 KB |
+| Viterbo e provincia | Lazio | **31 su 65** con previsione | 44 | 28 KB |
+| Genova e provincia | Liguria | tutti e 9 | 177 | 120 KB |
 | La Spezia e provincia | Liguria | **0 su 1** con previsione | 0 | 1 KB |
-| Savona e provincia | Liguria | tutti e 30 | 105 | 51 KB |
-| Bergamo e provincia | Lombardia | **33 su 35** con previsione | 150 | 60 KB |
-| Brescia e provincia | Lombardia | **148 su 159** con previsione | 172 | 118 KB |
-| Como e provincia | Lombardia | **51 su 56** con previsione | 473 | 228 KB |
-| Cremona e provincia | Lombardia | **88 su 89** con previsione | 151 | 86 KB |
-| Lecco e provincia | Lombardia | tutti e 28 | 414 | 179 KB |
+| Savona e provincia | Liguria | tutti e 30 | 107 | 53 KB |
+| Bergamo e provincia | Lombardia | **33 su 35** con previsione | 148 | 60 KB |
+| Brescia e provincia | Lombardia | **148 su 159** con previsione | 173 | 118 KB |
+| Como e provincia | Lombardia | **51 su 56** con previsione | 436 | 210 KB |
+| Cremona e provincia | Lombardia | tutti e 89 | 147 | 85 KB |
+| Lecco e provincia | Lombardia | tutti e 28 | 416 | 180 KB |
 | Lodi e provincia | Lombardia | tutti e 9 | 60 | 29 KB |
-| Mantova e provincia | Lombardia | **81 su 83** con previsione | 180 | 90 KB |
-| Milano e provincia | Lombardia | **12 su 13** con previsione | 709 | 388 KB |
-| Monza e Brianza e provincia | Lombardia | **46 su 54** con previsione | 611 | 330 KB |
-| Pavia e provincia | Lombardia | **213 su 216** con previsione | 457 | 245 KB |
-| Sondrio e provincia | Lombardia | tutti e 59 | 91 | 56 KB |
-| Varese e provincia | Lombardia | **59 su 62** con previsione | 354 | 193 KB |
-| Ancona e provincia | Marche | **21 su 39** con previsione | 150 | 70 KB |
-| Ascoli Piceno e provincia | Marche | tutti e 16 | 30 | 19 KB |
-| Macerata e provincia | Marche | tutti e 40 | 35 | 27 KB |
+| Mantova e provincia | Lombardia | **81 su 83** con previsione | 178 | 89 KB |
+| Milano e provincia | Lombardia | **12 su 13** con previsione | 595 | 301 KB |
+| Monza e Brianza e provincia | Lombardia | **46 su 54** con previsione | 581 | 293 KB |
+| Pavia e provincia | Lombardia | **197 su 216** con previsione | 422 | 218 KB |
+| Sondrio e provincia | Lombardia | tutti e 59 | 92 | 56 KB |
+| Varese e provincia | Lombardia | **59 su 62** con previsione | 331 | 176 KB |
+| Ancona e provincia | Marche | **21 su 39** con previsione | 112 | 53 KB |
+| Ascoli Piceno e provincia | Marche | tutti e 16 | 17 | 12 KB |
+| Macerata e provincia | Marche | tutti e 40 | 25 | 22 KB |
 | Pesaro e Urbino e provincia | Marche | tutti e 2 | 2 | 1 KB |
 | Campobasso e provincia | Molise | **2 su 59** con previsione | 8 | 10 KB |
 | Isernia e provincia | Molise | **15 su 24** con previsione | 24 | 10 KB |
-| Alessandria e provincia | Piemonte | **92 su 100** con previsione | 196 | 108 KB |
+| Alessandria e provincia | Piemonte | **77 su 100** con previsione | 135 | 82 KB |
 | Asti e provincia | Piemonte | **52 su 93** con previsione | 45 | 34 KB |
 | Biella e provincia | Piemonte | tutti e 29 | 66 | 19 KB |
-| Cuneo e provincia | Piemonte | **39 su 111** con previsione | 146 | 65 KB |
-| Novara e provincia | Piemonte | **88 su 125** con previsione | 233 | 98 KB |
-| Torino e provincia | Piemonte | **115 su 180** con previsione | 433 | 232 KB |
-| Verbano-Cusio-Ossola e provincia | Piemonte | **15 su 16** con previsione | 15 | 14 KB |
+| Cuneo e provincia | Piemonte | **36 su 111** con previsione | 124 | 59 KB |
+| Novara e provincia | Piemonte | **88 su 125** con previsione | 165 | 80 KB |
+| Torino e provincia | Piemonte | **111 su 180** con previsione | 370 | 196 KB |
+| Verbano-Cusio-Ossola e provincia | Piemonte | **15 su 16** con previsione | 13 | 12 KB |
 | Vercelli e provincia | Piemonte | **21 su 26** con previsione | 120 | 41 KB |
-| Bari e provincia | Puglia | **130 su 183** con previsione | 309 | 137 KB |
-| Barletta-Andria-Trani e provincia | Puglia | **1 su 22** con previsione | 106 | 30 KB |
+| Bari e provincia | Puglia | **130 su 183** con previsione | 234 | 112 KB |
+| Barletta-Andria-Trani e provincia | Puglia | **1 su 22** con previsione | 60 | 19 KB |
 | Brindisi e provincia | Puglia | **72 su 92** con previsione | 63 | 38 KB |
 | Foggia e provincia | Puglia | **21 su 76** con previsione | 112 | 39 KB |
 | Lecce e provincia | Puglia | **108 su 192** con previsione | 62 | 60 KB |
-| Taranto e provincia | Puglia | **47 su 68** con previsione | 98 | 37 KB |
+| Taranto e provincia | Puglia | **47 su 68** con previsione | 99 | 38 KB |
 | Nuoro e provincia | Sardegna | tutti e 5 | 24 | 9 KB |
 | Oristano e provincia | Sardegna | **29 su 33** con previsione | 31 | 15 KB |
 | Sassari e provincia | Sardegna | **33 su 34** con previsione | 39 | 16 KB |
-| Agrigento e provincia | Sicilia | **17 su 49** con previsione | 6 | 9 KB |
-| Caltanissetta e provincia | Sicilia | **23 su 24** con previsione | 43 | 17 KB |
-| Catania e provincia | Sicilia | **32 su 36** con previsione | 98 | 43 KB |
+| Agrigento e provincia | Sicilia | **17 su 49** con previsione | 4 | 8 KB |
+| Caltanissetta e provincia | Sicilia | **23 su 24** con previsione | 41 | 16 KB |
+| Catania e provincia | Sicilia | **32 su 36** con previsione | 77 | 35 KB |
 | Enna e provincia | Sicilia | tutti e 20 | 20 | 10 KB |
-| Messina e provincia | Sicilia | tutti e 10 | 90 | 39 KB |
-| Palermo e provincia | Sicilia | **46 su 48** con previsione | 150 | 61 KB |
-| Ragusa e provincia | Sicilia | **39 su 40** con previsione | 21 | 16 KB |
-| Siracusa e provincia | Sicilia | **47 su 50** con previsione | 52 | 24 KB |
-| Trapani e provincia | Sicilia | tutti e 102 | 29 | 35 KB |
+| Messina e provincia | Sicilia | tutti e 10 | 72 | 32 KB |
+| Palermo e provincia | Sicilia | **46 su 48** con previsione | 153 | 62 KB |
+| Ragusa e provincia | Sicilia | **39 su 40** con previsione | 19 | 15 KB |
+| Siracusa e provincia | Sicilia | **47 su 50** con previsione | 42 | 21 KB |
+| Trapani e provincia | Sicilia | tutti e 102 | 28 | 35 KB |
 | Arezzo e provincia | Toscana | **22 su 38** con previsione | 33 | 23 KB |
-| Firenze e provincia | Toscana | **40 su 53** con previsione | 145 | 70 KB |
+| Firenze e provincia | Toscana | **40 su 53** con previsione | 136 | 67 KB |
 | Grosseto e provincia | Toscana | tutti e 11 | 8 | 6 KB |
-| Livorno e provincia | Toscana | **12 su 15** con previsione | 15 | 9 KB |
-| Lucca e provincia | Toscana | **41 su 44** con previsione | 218 | 94 KB |
-| Massa-Carrara e provincia | Toscana | **7 su 13** con previsione | 137 | 55 KB |
-| Pisa e provincia | Toscana | **28 su 46** con previsione | 175 | 74 KB |
-| Pistoia e provincia | Toscana | tutti e 13 | 120 | 57 KB |
-| Siena e provincia | Toscana | **56 su 67** con previsione | 102 | 48 KB |
-| Bolzano e provincia | Trentino-Alto Adige | **8 su 47** con previsione | 44 | 25 KB |
+| Livorno e provincia | Toscana | **12 su 15** con previsione | 16 | 10 KB |
+| Lucca e provincia | Toscana | **41 su 44** con previsione | 215 | 93 KB |
+| Massa-Carrara e provincia | Toscana | **7 su 13** con previsione | 144 | 58 KB |
+| Pisa e provincia | Toscana | **28 su 46** con previsione | 160 | 69 KB |
+| Pistoia e provincia | Toscana | tutti e 13 | 102 | 50 KB |
+| Siena e provincia | Toscana | **56 su 67** con previsione | 103 | 48 KB |
+| Bolzano e provincia | Trentino-Alto Adige | **8 su 47** con previsione | 42 | 25 KB |
 | Trento e provincia | Trentino-Alto Adige | tutti e 38 | 24 | 27 KB |
-| Perugia e provincia | Umbria | **31 su 49** con previsione | 88 | 51 KB |
-| Terni e provincia | Umbria | tutti e 8 | 24 | 9 KB |
+| Perugia e provincia | Umbria | **31 su 49** con previsione | 73 | 45 KB |
+| Terni e provincia | Umbria | tutti e 8 | 14 | 6 KB |
 | Valle d'Aosta | Valle d'Aosta | **0 su 9** con previsione | 0 | 1 KB |
-| Belluno e provincia | Veneto | **11 su 13** con previsione | 58 | 26 KB |
-| Padova e provincia | Veneto | **78 su 80** con previsione | 440 | 206 KB |
-| Rovigo e provincia | Veneto | tutti e 64 | 67 | 37 KB |
-| Treviso e provincia | Veneto | tutti e 84 | 371 | 190 KB |
-| Venezia e provincia | Veneto | **72 su 74** con previsione | 493 | 188 KB |
-| Verona e provincia | Veneto | **55 su 58** con previsione | 157 | 66 KB |
-| Vicenza e provincia | Veneto | tutti e 46 | 307 | 116 KB |
+| Belluno e provincia | Veneto | **11 su 13** con previsione | 54 | 25 KB |
+| Padova e provincia | Veneto | **78 su 80** con previsione | 345 | 161 KB |
+| Rovigo e provincia | Veneto | tutti e 64 | 57 | 31 KB |
+| Treviso e provincia | Veneto | tutti e 84 | 309 | 160 KB |
+| Venezia e provincia | Veneto | **72 su 74** con previsione | 409 | 157 KB |
+| Verona e provincia | Veneto | **55 su 58** con previsione | 127 | 54 KB |
+| Vicenza e provincia | Veneto | tutti e 46 | 233 | 93 KB |
 
-In totale **3894 passaggi a livello con previsione** su 5102 censiti, in 103 zone.
+In totale **3833 passaggi a livello con previsione** su 5102 censiti, in 103 zone.
 <!-- zone:fine -->
 
 I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
