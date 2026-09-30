@@ -30,10 +30,10 @@ amministrativo.
 | Avellino e provincia | Campania | **14 su 72** con previsione | 5 | 11 KB |
 | Benevento e provincia | Campania | **35 su 75** con previsione | 34 | 20 KB |
 | Caserta e provincia | Campania | **15 su 56** con previsione | 144 | 68 KB |
-| Napoli e provincia | Campania | **30 su 40** con previsione | 284 | 135 KB |
+| Napoli e provincia | Campania | **30 su 40** con previsione | 285 | 136 KB |
 | Salerno e provincia | Campania | **58 su 65** con previsione | 189 | 110 KB |
 | Bologna e provincia | Emilia-Romagna | **36 su 51** con previsione | 260 | 131 KB |
-| Ferrara e provincia | Emilia-Romagna | **38 su 104** con previsione | 76 | 43 KB |
+| Ferrara e provincia | Emilia-Romagna | **38 su 104** con previsione | 76 | 44 KB |
 | Forlì-Cesena e provincia | Emilia-Romagna | tutti e 3 | 37 | 24 KB |
 | Modena e provincia | Emilia-Romagna | **28 su 31** con previsione | 141 | 55 KB |
 | Parma e provincia | Emilia-Romagna | tutti e 44 | 118 | 56 KB |
@@ -58,20 +58,20 @@ amministrativo.
 | Como e provincia | Lombardia | **51 su 56** con previsione | 473 | 228 KB |
 | Cremona e provincia | Lombardia | **88 su 89** con previsione | 150 | 86 KB |
 | Lecco e provincia | Lombardia | tutti e 28 | 414 | 179 KB |
-| Lodi e provincia | Lombardia | tutti e 9 | 59 | 29 KB |
+| Lodi e provincia | Lombardia | tutti e 9 | 60 | 29 KB |
 | Mantova e provincia | Lombardia | **81 su 83** con previsione | 180 | 90 KB |
-| Milano e provincia | Lombardia | **12 su 13** con previsione | 706 | 388 KB |
-| Monza e Brianza e provincia | Lombardia | **46 su 54** con previsione | 611 | 330 KB |
-| Pavia e provincia | Lombardia | **213 su 216** con previsione | 457 | 245 KB |
+| Milano e provincia | Lombardia | **12 su 13** con previsione | 706 | 387 KB |
+| Monza e Brianza e provincia | Lombardia | **46 su 54** con previsione | 611 | 329 KB |
+| Pavia e provincia | Lombardia | **213 su 216** con previsione | 488 | 258 KB |
 | Sondrio e provincia | Lombardia | tutti e 59 | 92 | 56 KB |
-| Varese e provincia | Lombardia | **59 su 62** con previsione | 352 | 191 KB |
+| Varese e provincia | Lombardia | **59 su 62** con previsione | 352 | 192 KB |
 | Ancona e provincia | Marche | **21 su 39** con previsione | 148 | 69 KB |
 | Ascoli Piceno e provincia | Marche | tutti e 16 | 30 | 19 KB |
 | Macerata e provincia | Marche | tutti e 40 | 35 | 27 KB |
 | Pesaro e Urbino e provincia | Marche | tutti e 2 | 2 | 1 KB |
 | Campobasso e provincia | Molise | **2 su 59** con previsione | 8 | 10 KB |
 | Isernia e provincia | Molise | **15 su 24** con previsione | 24 | 10 KB |
-| Alessandria e provincia | Piemonte | **91 su 100** con previsione | 195 | 107 KB |
+| Alessandria e provincia | Piemonte | **91 su 100** con previsione | 208 | 112 KB |
 | Asti e provincia | Piemonte | **52 su 93** con previsione | 45 | 34 KB |
 | Biella e provincia | Piemonte | tutti e 29 | 66 | 19 KB |
 | Cuneo e provincia | Piemonte | **43 su 111** con previsione | 148 | 68 KB |
@@ -88,12 +88,12 @@ amministrativo.
 | Nuoro e provincia | Sardegna | tutti e 5 | 24 | 9 KB |
 | Oristano e provincia | Sardegna | **29 su 33** con previsione | 31 | 15 KB |
 | Sassari e provincia | Sardegna | **33 su 34** con previsione | 39 | 16 KB |
-| Agrigento e provincia | Sicilia | **17 su 49** con previsione | 6 | 9 KB |
-| Caltanissetta e provincia | Sicilia | **23 su 24** con previsione | 43 | 17 KB |
+| Agrigento e provincia | Sicilia | **37 su 49** con previsione | 38 | 20 KB |
+| Caltanissetta e provincia | Sicilia | tutti e 24 | 58 | 23 KB |
 | Catania e provincia | Sicilia | **32 su 36** con previsione | 97 | 43 KB |
 | Enna e provincia | Sicilia | tutti e 20 | 20 | 10 KB |
-| Messina e provincia | Sicilia | tutti e 10 | 90 | 39 KB |
-| Palermo e provincia | Sicilia | **46 su 48** con previsione | 148 | 60 KB |
+| Messina e provincia | Sicilia | tutti e 10 | 86 | 38 KB |
+| Palermo e provincia | Sicilia | tutti e 48 | 145 | 61 KB |
 | Ragusa e provincia | Sicilia | **39 su 40** con previsione | 21 | 16 KB |
 | Siracusa e provincia | Sicilia | **47 su 50** con previsione | 50 | 23 KB |
 | Trapani e provincia | Sicilia | tutti e 102 | 29 | 35 KB |
@@ -119,7 +119,7 @@ amministrativo.
 | Verona e provincia | Veneto | **55 su 58** con previsione | 157 | 66 KB |
 | Vicenza e provincia | Veneto | tutti e 46 | 307 | 116 KB |
 
-In totale **3898 passaggi a livello con previsione** su 5102 censiti, in 103 zone.
+In totale **3921 passaggi a livello con previsione** su 5102 censiti, in 103 zone.
 <!-- zone:fine -->
 
 I dati si scaricano una zona alla volta: chi sta a Siderno non ha motivo di
